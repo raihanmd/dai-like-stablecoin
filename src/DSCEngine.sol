@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity 0.8.30;
 
+import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
+
+import {DecentralizedStableCoin} from "../src/DecentralizedStableCoin.sol";
+import {PriceConsumer} from "./lib/PriceConsumer.sol";
+
 /**
  * @title DSCEngine
  * @author raihanmd
@@ -12,31 +19,103 @@ pragma solidity 0.8.30;
  *
  * This DSC also should be `over collateralized`. the value of collateral should be higher than the value of DSC
  */
-contract DSCEngine {
+contract DSCEngine is ReentrancyGuard {
+    error DSCEngine__ConstructorMissmatchArrayLength();
+
     error DSCEngine__CollateralTokenNotSupported();
+    error DSCEngine__AmountShouldBeMoreThanZero();
+    error DSCEngine__AllowanceExceedsBalance();
+    error DSCEngine__TransferFailed();
 
-    struct UserProfile {
-        uint256 wethBalance;
-        uint256 wbtcBalance;
-        uint256 dscBalance;
-        uint256 totalCollateral;
+    event CollateralDeposited(address indexed user, address indexed token, uint256 amount);
+
+    /**
+     * @dev Mapping of collateral token to USD
+     */
+    mapping(address token => bytes32 priceFeed) private s_collateralTokenPriceFeed;
+    mapping(address user => mapping(address token => uint256 amount)) private s_collateranDeposited;
+    mapping(address user => uint256 dscMinted) private s_dscMinted;
+
+    address[] private s_collateralTokens;
+
+    IPyth immutable i_pythContract;
+    DecentralizedStableCoin immutable i_dscContract;
+
+    //////////////////////////////////
+    //          MODIFIERS           //
+    //////////////////////////////////
+
+    /**
+     * @notice Check if the collateral token is supported
+     * @param _collateralTokenAddress Address of the collateral token
+     */
+    modifier collateralTokenAddressShouldBeSupported(address _collateralTokenAddress) {
+        if (s_collateralTokenPriceFeed[_collateralTokenAddress] == bytes32(0)) {
+            revert DSCEngine__CollateralTokenNotSupported();
+        }
+
+        _;
     }
 
-    address[2] private s_collateralTokens;
+    /**
+     * @notice Check if the amount is more than zero
+     * @param _amount Amount of collateral token
+     */
+    modifier moreThanZero(uint256 _amount) {
+        if (_amount == 0) revert DSCEngine__AmountShouldBeMoreThanZero();
 
-    mapping(address => UserProfile) private s_userProfile;
-
-    constructor(address _wethAddress, address _wbtcAddress) {
-        s_collateralTokens[0] = _wethAddress;
-        s_collateralTokens[1] = _wbtcAddress;
+        _;
     }
 
+    constructor(
+        address _pythContract,
+        address _dscAddress,
+        address[] memory _colalteralTokens,
+        bytes32[] memory _priceFeeds
+    ) {
+        if (_colalteralTokens.length != _priceFeeds.length) {
+            revert DSCEngine__ConstructorMissmatchArrayLength();
+        }
+
+        i_pythContract = IPyth(_pythContract);
+        i_dscContract = DecentralizedStableCoin(_dscAddress);
+
+        s_collateralTokens = _colalteralTokens;
+
+        for (uint256 i = 0; i < _colalteralTokens.length; i++) {
+            s_collateralTokenPriceFeed[_colalteralTokens[i]] = _priceFeeds[i];
+        }
+    }
+
+    //////////////////////////////////
+    //      EXTERNAL FUNCTIONS      //
+    //////////////////////////////////
     function depositCollateralAndMintDsc() external {}
 
-    function depositCollateral(
-        address _collateralToken,
-        uint256 _amount
-    ) external _collateralTokenShouldBeSupported(_collateralToken) {}
+    /**
+     * @param _collateralTokenAddress Supported ERC20 token address (WETH and WBTC)
+     * @param _amount Amount of collateral token
+     *
+     * This function will deposit collateral token to the contract
+     */
+    function depositCollateral(address _collateralTokenAddress, uint256 _amount)
+        external
+        collateralTokenAddressShouldBeSupported(_collateralTokenAddress)
+        moreThanZero(_amount)
+        nonReentrant
+    {
+        if (IERC20(_collateralTokenAddress).allowance(msg.sender, address(this)) < _amount) {
+            revert DSCEngine__AllowanceExceedsBalance();
+        }
+
+        s_collateranDeposited[msg.sender][_collateralTokenAddress] += _amount;
+
+        emit CollateralDeposited(msg.sender, _collateralTokenAddress, _amount);
+
+        bool success = IERC20(_collateralTokenAddress).transferFrom(msg.sender, address(this), _amount);
+
+        if (!success) revert DSCEngine__TransferFailed();
+    }
 
     function redeemDscAndWithdrawCollateral() external {}
 
@@ -44,23 +123,62 @@ contract DSCEngine {
 
     function withdrawCollateral() external {}
 
-    function mintDsc() external {}
+    /**
+     * @param _amount Amount of DSC to mint
+     * @notice should overcollateralized and above minimum of threshold
+     */
+    function mintDsc(uint256 _amount) external moreThanZero(_amount) {
+        s_dscMinted[msg.sender] += _amount;
+    }
 
     function burnDsc() external {}
 
     function luquidate() external {}
 
-    function getHealthFactor() external view returns (uint256) {}
+    //////////////////////////////////
+    // PRIVATE & INTERNAL FUNCTIONS //
+    //////////////////////////////////
+    function _healthFactorCheck() private view {}
 
-    modifier _collateralTokenShouldBeSupported(address _collateralToken) {
-        address[2] memory collateralTokens = s_collateralTokens;
+    /**
+     * @notice Return how close is user to a liquidation
+     *
+     * If user goes below 1, it can be liquidated
+     */
+    function _healthFactor(address _user) private view returns (uint256) {
+        (uint256 dscBalance, uint256 collateralValue) = _getAccountInformation(_user);
+        if (dscBalance == 0) return type(uint256).max;
+        uint256 collateralAdjustedForThreshold = (collateralValue * 50) / 100; // 50% threshold
+        return (collateralAdjustedForThreshold * 1e18) / dscBalance;
+    }
+
+    /**
+     * @notice Return the DSC balance and collateral value
+     */
+    function _getAccountInformation(address _user) private view returns (uint256 dscBalance, uint256 collateralValue) {
+        dscBalance = s_dscMinted[_user];
+        collateralValue = getCollateralValue(_user);
+        return (dscBalance, collateralValue);
+    }
+
+    //////////////////////////////////
+    //       PUBLIC FUNCTIONS       //
+    //////////////////////////////////
+    function getHealthFactor(address _user) public view returns (uint256) {
+        return _healthFactor(_user);
+    }
+
+    function getCollateralValue(address _user) public view returns (uint256 totalCollateralValue) {
+        address[] memory collateralTokens = s_collateralTokens;
 
         for (uint256 i = 0; i < collateralTokens.length; i++) {
-            if (collateralTokens[i] != _collateralToken) {
-                revert DSCEngine__CollateralTokenNotSupported();
+            address token = collateralTokens[i];
+            uint256 amount = s_collateranDeposited[_user][token];
+
+            if (amount > 0) {
+                uint256 price = PriceConsumer.getPricePush(i_pythContract, s_collateralTokenPriceFeed[token]);
+                totalCollateralValue += (amount * price) / 1e18;
             }
         }
-
-        _;
     }
 }
