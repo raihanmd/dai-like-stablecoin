@@ -1,0 +1,8 @@
+{
+  "name": "stablecoin",
+  "private": true,
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0",
+    "@pythnetwork/pyth-sdk-solidity": "^4.2.0"
+  }
+}
