@@ -6,15 +6,14 @@ import {DSCEngine} from "../src/DSCEngine.sol";
 import {Config} from "../script/config/Config.s.sol";
 
 contract DSCEngineDeploy is Script {
-    Config.NetworkConfig networkConfig;
-
     function run() public {
-        deploy(msg.sender);
+        deploy(msg.sender, new Config().getConfig());
     }
 
-    function deploy(address _deployer) public returns (DSCEngine dscEngine) {
-        networkConfig = new Config().getConfig();
-
+    function deploy(address _deployer, Config.NetworkConfig memory networkConfig)
+        public
+        returns (DSCEngine dscEngine)
+    {
         vm.startBroadcast(_deployer);
         dscEngine = new DSCEngine(
             networkConfig.pythContract,

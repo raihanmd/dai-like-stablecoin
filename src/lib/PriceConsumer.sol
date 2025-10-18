@@ -8,7 +8,9 @@ import {PythUtils} from "@pythnetwork/pyth-sdk-solidity/PythUtils.sol";
 import {console2} from "forge-std/console2.sol";
 
 library PriceConsumer {
-    function getPricePull(IPyth _pythContract, bytes32 _priceFeedId, bytes[] calldata priceUpdate)
+    uint256 constant PRICE_PRECISION = 1e18;
+
+    function oracle_getPricePull(IPyth _pythContract, bytes32 _priceFeedId, bytes[] calldata priceUpdate)
         internal
         returns (uint256)
     {
@@ -22,7 +24,7 @@ library PriceConsumer {
         return convertedPrice;
     }
 
-    function getPricePush(IPyth _pythContract, bytes32 _priceFeedId) internal view returns (uint256) {
+    function oracle_getPricePush(IPyth _pythContract, bytes32 _priceFeedId) internal view returns (uint256) {
         PythStructs.Price memory price = _pythContract.getPriceNoOlderThan(_priceFeedId, 60);
 
         uint256 convertedPrice = PythUtils.convertToUint(price.price, price.expo, 18);

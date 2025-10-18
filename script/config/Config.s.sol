@@ -3,16 +3,27 @@ pragma solidity 0.8.30;
 
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
+import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
 import {MockPyth} from "@pythnetwork/pyth-sdk-solidity/MockPyth.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import {Constants} from "./Constant.s.sol";
+import {Constants} from "./Constants.s.sol";
 import {MockERC20} from "../../src/mock/MockERC20.sol";
+import {DecentralizedStableCoin} from "../../src/DecentralizedStableCoin.sol";
 
+import {DecentralizedStableCoinDeploy} from "../../script/DecentralizedStableCoinDeploy.s.sol";
+import {PythDeploy} from "../../script/pyth/PythDeploy.s.sol";
+
+import {PythInteractions} from "../../script/pyth/PythInteractions.s.sol";
+
+/**
+ * @dev All the constants come from Constants.s.sol
+ */
 contract Config is Constants, Script {
     error Config__InvalidChainId();
 
-    MockPyth public pyth;
+    IPyth public pyth;
+    DecentralizedStableCoin public dsc;
 
     struct NetworkConfig {
         address pythContract;
@@ -25,9 +36,8 @@ contract Config is Constants, Script {
     mapping(uint256 chainId => NetworkConfig) public networkConfigs;
 
     constructor() {
-        networkConfigs[ETH_MAINNET_CHAIN_ID] = getMainnetEthConfig();
-        networkConfigs[ETH_SEPOLIA_CHAIN_ID] = getSepoliaEthConfig();
-        networkConfigs[LISK_SEPOLIA_CHAIN_ID] = geSepoliaLiskConfig();
+        networkConfigs[BASE_SEPOLIA_CHAIN_ID] = getBaseSepoliaConfig();
+        networkConfigs[ETH_SEPOLIA_CHAIN_ID] = getEthSepoliaConfig();
     }
 
     function getConfig() public returns (NetworkConfig memory) {
@@ -46,30 +56,24 @@ contract Config is Constants, Script {
         return config;
     }
 
-    function getMainnetEthConfig() public pure returns (NetworkConfig memory mainnetNetworkConfig) {
+    function getBaseSepoliaConfig() public returns (NetworkConfig memory mainnetNetworkConfig) {
+        dsc = new DecentralizedStableCoinDeploy().deploy(msg.sender);
+
         mainnetNetworkConfig = NetworkConfig({
-            pythContract: 0x0000000000000000000000000000000000000000,
-            dscAddress: 0x0000000000000000000000000000000000000000,
+            pythContract: 0xA2aa501b19aff244D90cc15a4Cf739D2725B5729,
+            dscAddress: address(dsc),
             colateralTokens: new address[](0),
             priceFeeds: new bytes32[](0),
             exist: true
         });
     }
 
-    function getSepoliaEthConfig() public pure returns (NetworkConfig memory sepoliaEthNetworkConfig) {
+    function getEthSepoliaConfig() public returns (NetworkConfig memory sepoliaEthNetworkConfig) {
+        dsc = new DecentralizedStableCoinDeploy().deploy(msg.sender);
+
         sepoliaEthNetworkConfig = NetworkConfig({
-            pythContract: 0x0000000000000000000000000000000000000000,
-            dscAddress: 0x0000000000000000000000000000000000000000,
-            colateralTokens: new address[](0),
-            priceFeeds: new bytes32[](0),
-            exist: true
-        });
-    }
-
-    function geSepoliaLiskConfig() public pure returns (NetworkConfig memory sepoliaLiskNetworkConfig) {
-        sepoliaLiskNetworkConfig = NetworkConfig({
-            pythContract: 0x0000000000000000000000000000000000000000,
-            dscAddress: 0x0000000000000000000000000000000000000000,
+            pythContract: 0xDd24F84d36BF92C65F92307595335bdFab5Bbd21,
+            dscAddress: address(dsc),
             colateralTokens: new address[](0),
             priceFeeds: new bytes32[](0),
             exist: true
@@ -77,22 +81,33 @@ contract Config is Constants, Script {
     }
 
     function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory localNetworkConfig) {
-        pyth = new MockPyth(60, 1);
+        // TODO: I dont think so, the setup should be here or make higher abstraction level for config (in this case for local anvil only)
+        console2.log(msg.sender);
 
-        address[] memory colateralTokens;
-        MockERC20 tokenA = new MockERC20("Mock Token A", "MTA");
-        MockERC20 tokenB = new MockERC20("Mock Token B", "MTB");
+        pyth = new PythDeploy().deploy(msg.sender);
+        dsc = new DecentralizedStableCoinDeploy().deploy(msg.sender);
 
-        colateralTokens[0] = address(tokenA);
-        colateralTokens[1] = address(tokenB);
+        PythInteractions pythInteractions = new PythInteractions();
 
-        bytes32[] memory priceFeeds;
-        priceFeeds[0] = bytes32(uint256(0x1));
-        priceFeeds[1] = bytes32(uint256(0x2));
+        pythInteractions.createPriceFeed(address(pyth), ETH_USD_PRICE_FEED, 4000, "ETH/USD");
+        pythInteractions.createPriceFeed(address(pyth), BTC_USD_PRICE_FEED, 100_000, "BTC/USD");
+
+        address[] memory colateralTokens = new address[](2);
+        vm.startBroadcast(msg.sender);
+        MockERC20 wethFake = new MockERC20("Wrapped Ethereum", "WETH");
+        MockERC20 wbtcFake = new MockERC20("Wrapped Bitcoin", "WBTC");
+        vm.stopBroadcast();
+
+        colateralTokens[0] = address(wethFake);
+        colateralTokens[1] = address(wbtcFake);
+
+        bytes32[] memory priceFeeds = new bytes32[](2);
+        priceFeeds[0] = ETH_USD_PRICE_FEED;
+        priceFeeds[1] = BTC_USD_PRICE_FEED;
 
         localNetworkConfig = NetworkConfig({
             pythContract: address(pyth),
-            dscAddress: 0x0000000000000000000000000000000000000000,
+            dscAddress: address(dsc),
             colateralTokens: colateralTokens,
             priceFeeds: priceFeeds,
             exist: true

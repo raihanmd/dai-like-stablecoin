@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import {PythStructs} from "@pythnetwork/pyth-sdk-solidity/PythStructs.sol";
 
 import {DecentralizedStableCoin} from "../src/DecentralizedStableCoin.sol";
 import {PriceConsumer} from "./lib/PriceConsumer.sol";
@@ -26,6 +27,13 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__AmountShouldBeMoreThanZero();
     error DSCEngine__AllowanceExceedsBalance();
     error DSCEngine__TransferFailed();
+    error DSCEngine__MintFailed();
+    error DSCEngine__HealthFactorIsTooLow();
+
+    uint8 constant LIQUIDATION_THRESHOLD = 50; // 200% overcollateralized
+    uint8 constant LIQUIDATION_PRECISSION = 100;
+    uint8 constant MIN_HEALTH_FACTOR = 1;
+    uint256 constant PRECISSION = 1e18;
 
     event CollateralDeposited(address indexed user, address indexed token, uint256 amount);
 
@@ -64,6 +72,14 @@ contract DSCEngine is ReentrancyGuard {
     modifier moreThanZero(uint256 _amount) {
         if (_amount == 0) revert DSCEngine__AmountShouldBeMoreThanZero();
 
+        _;
+    }
+
+    modifier healthFactorCheck() {
+        uint256 healthFactor = _healthFactor(msg.sender);
+        if (healthFactor < MIN_HEALTH_FACTOR) {
+            revert DSCEngine__HealthFactorIsTooLow();
+        }
         _;
     }
 
@@ -127,29 +143,39 @@ contract DSCEngine is ReentrancyGuard {
      * @param _amount Amount of DSC to mint
      * @notice should overcollateralized and above minimum of threshold
      */
-    function mintDsc(uint256 _amount) external moreThanZero(_amount) {
+    function mintDsc(uint256 _amount) external moreThanZero(_amount) healthFactorCheck {
         s_dscMinted[msg.sender] += _amount;
+
+        bool minted = i_dscContract.mint(msg.sender, _amount);
+        if (!minted) {
+            revert DSCEngine__MintFailed();
+        }
     }
 
     function burnDsc() external {}
 
-    function luquidate() external {}
+    function liquidate() external {}
 
     //////////////////////////////////
     // PRIVATE & INTERNAL FUNCTIONS //
-    //////////////////////////////////
-    function _healthFactorCheck() private view {}
+    /////////////////////////////////
 
     /**
      * @notice Return how close is user to a liquidation
      *
      * If user goes below 1, it can be liquidated
+     * The liquidation threshold is 50%, by that means as an example if the collateral value is 100, the user can mint up to 50 DSC
+     * and if below that the user can be liquidated
      */
     function _healthFactor(address _user) private view returns (uint256) {
         (uint256 dscBalance, uint256 collateralValue) = _getAccountInformation(_user);
         if (dscBalance == 0) return type(uint256).max;
-        uint256 collateralAdjustedForThreshold = (collateralValue * 50) / 100; // 50% threshold
-        return (collateralAdjustedForThreshold * 1e18) / dscBalance;
+        uint256 collateralAdjustedForThreshold = (collateralValue * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISSION; // e.g $150 * 50 / 100 = 75
+
+        // Good e.g 75 * 1e18 / 50 = 1.5e18
+        // Bad e.g 75 * 1e18 / 100 = 0.75e18
+
+        return (collateralAdjustedForThreshold * PRECISSION) / dscBalance;
     }
 
     /**
@@ -176,9 +202,17 @@ contract DSCEngine is ReentrancyGuard {
             uint256 amount = s_collateranDeposited[_user][token];
 
             if (amount > 0) {
-                uint256 price = PriceConsumer.getPricePush(i_pythContract, s_collateralTokenPriceFeed[token]);
-                totalCollateralValue += (amount * price) / 1e18;
+                uint256 price = PriceConsumer.oracle_getPricePush(i_pythContract, s_collateralTokenPriceFeed[token]);
+                totalCollateralValue += (amount * price) / PriceConsumer.PRICE_PRECISION;
             }
         }
+    }
+
+    function getPrice(address _collateralToken) public view returns (uint256) {
+        return PriceConsumer.oracle_getPricePush(i_pythContract, s_collateralTokenPriceFeed[_collateralToken]);
+    }
+
+    function getCollateralTokens() public view returns (address[] memory) {
+        return s_collateralTokens;
     }
 }
