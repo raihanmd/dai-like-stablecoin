@@ -106,7 +106,10 @@ contract DSCEngine is ReentrancyGuard {
     //////////////////////////////////
     //      EXTERNAL FUNCTIONS      //
     //////////////////////////////////
-    function depositCollateralAndMintDsc() external {}
+    function depositCollateralAndMintDsc(address _collateralTokenAddress, uint256 _amount) external {
+        depositCollateral(_collateralTokenAddress, _amount);
+        mintDsc(_amount);
+    }
 
     /**
      * @param _collateralTokenAddress Supported ERC20 token address (WETH and WBTC)
@@ -115,7 +118,7 @@ contract DSCEngine is ReentrancyGuard {
      * This function will deposit collateral token to the contract
      */
     function depositCollateral(address _collateralTokenAddress, uint256 _amount)
-        external
+        public
         collateralTokenAddressShouldBeSupported(_collateralTokenAddress)
         moreThanZero(_amount)
         nonReentrant
@@ -143,7 +146,7 @@ contract DSCEngine is ReentrancyGuard {
      * @param _amount Amount of DSC to mint
      * @notice should overcollateralized and above minimum of threshold
      */
-    function mintDsc(uint256 _amount) external moreThanZero(_amount) healthFactorCheck {
+    function mintDsc(uint256 _amount) public moreThanZero(_amount) healthFactorCheck {
         s_dscMinted[msg.sender] += _amount;
 
         bool minted = i_dscContract.mint(msg.sender, _amount);
@@ -208,11 +211,11 @@ contract DSCEngine is ReentrancyGuard {
         }
     }
 
-    function getPrice(address _collateralToken) public view returns (uint256) {
-        return PriceConsumer.oracle_getPricePush(i_pythContract, s_collateralTokenPriceFeed[_collateralToken]);
+    function getAccountInformation(address _user) public view returns (uint256 dscBalance, uint256 collateralValue) {
+        return _getAccountInformation(_user);
     }
 
-    function getCollateralTokens() public view returns (address[] memory) {
-        return s_collateralTokens;
+    function getPrice(address _collateralToken) public view returns (uint256) {
+        return PriceConsumer.oracle_getPricePush(i_pythContract, s_collateralTokenPriceFeed[_collateralToken]);
     }
 }

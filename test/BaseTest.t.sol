@@ -18,48 +18,36 @@ import {DecentralizedStableCoinDeploy} from "../script/DecentralizedStableCoinDe
 
 contract BaseTest is Test, Constants {
     Config.NetworkConfig internal networkConfig;
+    mapping(uint256 => address) users;
+    uint256 internal totalUsers;
 
-    function setUpBaseTest() public {
+    function setUpBaseTest() internal {
         networkConfig = new Config().getConfig();
+    }
 
-        /**
-         * @dev We do the setup for local anvil network here in the base test so that
-         * all the unit tests that inherit from this base test can use the deployed contracts
-         * and the network config.
-         */
-        if (block.chainid == LOCAL_CHAIN_ID) {
-            IPyth pyth = new PythDeploy().deploy(FOUNDRY_DEFAULT_SENDER);
-            DecentralizedStableCoin dsc = new DecentralizedStableCoinDeploy().deploy(FOUNDRY_DEFAULT_SENDER);
-
-            PythInteractions pythInteractions = new PythInteractions();
-
-            pythInteractions.createPriceFeed(address(pyth), ETH_USD_PRICE_FEED, 4000, "ETH/USD");
-            pythInteractions.createPriceFeed(address(pyth), BTC_USD_PRICE_FEED, 100_000, "BTC/USD");
-
-            address[] memory colateralTokens = new address[](2);
-
-            vm.startBroadcast(FOUNDRY_DEFAULT_SENDER);
-            MockERC20 wethFake = new MockERC20("Wrapped Ethereum", "WETH");
-            MockERC20 wbtcFake = new MockERC20("Wrapped Bitcoin", "WBTC");
-            vm.stopBroadcast();
-
-            colateralTokens[0] = address(wethFake);
-            colateralTokens[1] = address(wbtcFake);
-
-            bytes32[] memory priceFeeds = new bytes32[](2);
-
-            priceFeeds[0] = ETH_USD_PRICE_FEED;
-            priceFeeds[1] = BTC_USD_PRICE_FEED;
-
-            console2.log("Local Anvil Network Detected. Deploying Mocks and DSC Engine...");
-
-            BaseTest.networkConfig = Config.NetworkConfig({
-                pythContract: address(pyth),
-                dscAddress: address(dsc),
-                colateralTokens: colateralTokens,
-                priceFeeds: priceFeeds,
-                exist: true
-            });
+    function setupUser(uint256 _total) internal {
+        totalUsers = _total;
+        for (uint256 i = 0; i < _total; i++) {
+            users[i] = makeAddr(string.concat("user", vm.toString(i)));
         }
+    }
+
+    function initiateBalanceUser(uint256 amount) internal {
+        for (uint256 i = 0; i < totalUsers; i++) {
+            vm.deal(users[i], amount);
+        }
+    }
+
+    function initiateCollateralBalance(uint256 amount) internal {
+        for (uint256 i = 0; i < totalUsers; i++) {
+            for (uint256 j = 0; j < networkConfig.collateralTokens.length; j++) {
+                MockERC20(networkConfig.collateralTokens[j]).mint(users[i], amount);
+            }
+        }
+    }
+
+    modifier localNetworkOnly() {
+        if (block.chainid != LOCAL_CHAIN_ID) return;
+        _;
     }
 }

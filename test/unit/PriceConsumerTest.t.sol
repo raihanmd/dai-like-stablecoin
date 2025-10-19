@@ -12,13 +12,17 @@ contract PriceConsumerTest is BaseTest {
     DSCEngine dscEngineContract;
 
     function setUp() public {
-        setUpBaseTest();
+        BaseTest.setUpBaseTest();
 
-        dscEngineContract = new DSCEngineDeploy().deploy(msg.sender, networkConfig);
+        dscEngineContract = new DSCEngineDeploy().deploy(msg.sender, BaseTest.networkConfig);
     }
 
+    /////////////////////////
+    //       DEPOSIT       //
+    /////////////////////////
     function test__shouldSuccessGetPriceOfEachCollateralToken() public view {
-        address[] memory collateralTokens = dscEngineContract.getCollateralTokens();
+        address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
+
         for (uint256 i = 0; i < collateralTokens.length; i++) {
             uint256 price = dscEngineContract.getPrice(collateralTokens[i]);
 

@@ -12,6 +12,9 @@ abstract contract Constants {
     bytes32 public constant ETH_USD_PRICE_FEED = keccak256(abi.encodePacked("ETH/USD"));
     bytes32 public constant BTC_USD_PRICE_FEED = keccak256(abi.encodePacked("BTC/USD"));
 
+    int64 public constant ETH_PRICE = 4_000;
+    int64 public constant BTC_PRICE = 100_000;
+
     function getNetworkName(uint256 chainId) public pure returns (string memory) {
         // if (chainId == ETH_MAINNET_CHAIN_ID) return "Ethereum Mainnet";
         if (chainId == BASE_SEPOLIA_CHAIN_ID) return "Base Sepolia";
