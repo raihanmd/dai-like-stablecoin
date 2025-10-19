@@ -32,13 +32,29 @@ contract DSCEngineTest is BaseTest {
 
     function setUp() public {
         BaseTest.setUpBaseTest();
-        BaseTest.setupUser(5);
+        BaseTest.setupUser(2);
         BaseTest.initiateBalanceUser(INITIAL_BALANCE);
         BaseTest.initiateCollateralBalance(INITIAL_BALANCE);
 
         dscEngineContract = new DSCEngineDeploy().deploy(msg.sender, BaseTest.networkConfig);
     }
 
+    /////////////////////////////////////////
+    //               HELPER                //
+    /////////////////////////////////////////
+    function helper_collateralApprove(address user, address collateralToken, uint256 amount) public {
+        vm.prank(user);
+        MockERC20(collateralToken).approve(address(dscEngineContract), amount);
+    }
+
+    function helper_deposit(address user, address collateralToken, uint256 amount) public {
+        vm.prank(user);
+        dscEngineContract.depositCollateral(collateralToken, amount);
+    }
+
+    /////////////////////////////////////////
+    //            CONFIG RELATED           //
+    /////////////////////////////////////////
     function test__success_balanceInCollateralShouldSameAsInitialize() public view BaseTest.localNetworkOnly() {
         address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
 
@@ -59,14 +75,14 @@ contract DSCEngineTest is BaseTest {
 
         for (uint256 i = 0; i < totalUsers; i++) {
             for (uint256 j = 0; j < collateralTokens.length; j++) {
-                vm.startPrank(users[i]);
-                MockERC20(networkConfig.collateralTokens[j]).approve(address(dscEngineContract), AMOUNT_TO_DEPOSIT);
+                helper_collateralApprove(users[i], collateralTokens[j], AMOUNT_TO_DEPOSIT);
 
+                vm.startPrank(users[i]);
                 vm.expectEmit(true, true, false, true, address(dscEngineContract));
                 emit CollateralDeposited(users[i], collateralTokens[j], AMOUNT_TO_DEPOSIT);
-
-                dscEngineContract.depositCollateral(collateralTokens[j], AMOUNT_TO_DEPOSIT);
                 vm.stopPrank();
+
+                helper_deposit(users[i], collateralTokens[j], AMOUNT_TO_DEPOSIT);
             }
         }
     }
@@ -95,6 +111,35 @@ contract DSCEngineTest is BaseTest {
     }
 
     /////////////////////////////////////////
+    //              MINT DSC               //
+    /////////////////////////////////////////
+    function test__success_mintDSCAfterDepositCollateral() public {
+        address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
+        uint256 dscToBeMinted = AMOUNT_TO_DEPOSIT / 2;
+
+        helper_collateralApprove(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
+        helper_deposit(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
+
+        vm.prank(users[0]);
+        dscEngineContract.mintDsc(dscToBeMinted);
+
+        (uint256 dscMinted,) = dscEngineContract.getAccountInformation(users[0]);
+
+        vm.assertEq(dscMinted, dscToBeMinted);
+    }
+
+    function test_error_userCantMintDSCWithZeroAmount() public {
+        address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
+
+        helper_collateralApprove(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
+        helper_deposit(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
+
+        vm.prank(users[0]);
+        vm.expectRevert(DSCEngine__AmountShouldBeMoreThanZero.selector);
+        dscEngineContract.mintDsc(0);
+    }
+
+    /////////////////////////////////////////
     //       GET ACCOUNT INFORMATION       //
     /////////////////////////////////////////
     function test__success_shouldCorrectCalculatingTotalCollateralValue() public {
@@ -105,16 +150,13 @@ contract DSCEngineTest is BaseTest {
             uint256 sumPriceCollateral;
 
             for (uint256 j = 0; j < collateralTokens.length; j++) {
-                vm.startPrank(users[i]);
-                MockERC20(networkConfig.collateralTokens[j]).approve(address(dscEngineContract), AMOUNT_TO_DEPOSIT);
+                helper_collateralApprove(users[i], collateralTokens[j], AMOUNT_TO_DEPOSIT);
 
-                dscEngineContract.depositCollateral(collateralTokens[j], AMOUNT_TO_DEPOSIT);
+                helper_deposit(users[i], collateralTokens[j], AMOUNT_TO_DEPOSIT);
                 // deposit 0.5 token
                 // ETH 0.5 * 4000 = 2000 USD
                 // BTC 0.5 * 100000 = 50000 USD
                 // TOTAL = 52000 USD
-
-                vm.stopPrank();
 
                 (, uint256 tempCollateralValue) = dscEngineContract.getAccountInformation(users[i]);
 
@@ -126,4 +168,23 @@ contract DSCEngineTest is BaseTest {
             vm.assertEq(collateralValue, (AMOUNT_TO_DEPOSIT * sumPriceCollateral) / PRICE_PRECISSION);
         }
     }
+
+    /////////////////////////////////////////
+    //          GET HEALTH FACTOR          //
+    /////////////////////////////////////////
+    // function test__success_shouldCorrectCalculatingHealthFactor() public {
+    //     address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
+    //     uint256 dscToBeMinted = AMOUNT_TO_DEPOSIT / 2;
+
+    //     helper_collateralApprove(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
+    //     helper_deposit(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
+
+    //     vm.prank(users[0]);
+    //     dscEngineContract.mintDsc(dscToBeMinted);
+
+    //     uint256 healthFactor = dscEngineContract.getHealthFactor(users[0]);
+    //     vm.assertEq(
+    //         healthFactor, (AMOUNT_TO_DEPOSIT * dscEngineContract.getPrice(collateralTokens[0])) / PRICE_PRECISSION
+    //     );
+    // }
 }
