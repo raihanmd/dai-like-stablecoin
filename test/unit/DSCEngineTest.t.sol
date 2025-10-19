@@ -120,10 +120,10 @@ contract DSCEngineTest is BaseTest {
 
                 collateralValue = tempCollateralValue;
 
-                sumPriceCollateral += dscEngineContract.getPrice(collateralTokens[j]) / 1e18;
+                sumPriceCollateral += dscEngineContract.getPrice(collateralTokens[j]);
                 // 104000 USD
             }
-            vm.assertEq(collateralValue, AMOUNT_TO_DEPOSIT * sumPriceCollateral);
+            vm.assertEq(collateralValue, (AMOUNT_TO_DEPOSIT * sumPriceCollateral) / PRICE_PRECISSION);
         }
     }
 }

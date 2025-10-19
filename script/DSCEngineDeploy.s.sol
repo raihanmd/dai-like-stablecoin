@@ -31,7 +31,11 @@ contract DSCEngineDeploy is Script, Constants {
         vm.startBroadcast(_deployer);
 
         dscEngine = new DSCEngine(
-            networkConfig.pythContract, address(dsc), networkConfig.collateralTokens, networkConfig.priceFeeds
+            networkConfig.pythContract,
+            address(dsc),
+            networkConfig.collateralTokens,
+            networkConfig.priceFeeds,
+            networkConfig.pythMaxAge
         );
 
         dsc.transferOwnership(address(dscEngine));

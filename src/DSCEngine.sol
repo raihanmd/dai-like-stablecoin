@@ -30,6 +30,7 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__MintFailed();
     error DSCEngine__HealthFactorIsTooLow();
 
+    uint256 immutable i_pythMaxAge;
     uint8 constant LIQUIDATION_THRESHOLD = 50; // 200% overcollateralized
     uint8 constant LIQUIDATION_PRECISSION = 100;
     uint8 constant MIN_HEALTH_FACTOR = 1;
@@ -87,11 +88,14 @@ contract DSCEngine is ReentrancyGuard {
         address _pythContract,
         address _dscAddress,
         address[] memory _colalteralTokens,
-        bytes32[] memory _priceFeeds
+        bytes32[] memory _priceFeeds,
+        uint256 _pythMaxAge
     ) {
         if (_colalteralTokens.length != _priceFeeds.length) {
             revert DSCEngine__ConstructorMissmatchArrayLength();
         }
+
+        i_pythMaxAge = _pythMaxAge;
 
         i_pythContract = IPyth(_pythContract);
         i_dscContract = DecentralizedStableCoin(_dscAddress);
@@ -205,7 +209,8 @@ contract DSCEngine is ReentrancyGuard {
             uint256 amount = s_collateranDeposited[_user][token];
 
             if (amount > 0) {
-                uint256 price = PriceConsumer.oracle_getPricePush(i_pythContract, s_collateralTokenPriceFeed[token]);
+                uint256 price =
+                    PriceConsumer.oracle_getPricePush(i_pythContract, s_collateralTokenPriceFeed[token], i_pythMaxAge);
                 totalCollateralValue += (amount * price) / PriceConsumer.PRICE_PRECISION;
             }
         }
@@ -216,6 +221,8 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     function getPrice(address _collateralToken) public view returns (uint256) {
-        return PriceConsumer.oracle_getPricePush(i_pythContract, s_collateralTokenPriceFeed[_collateralToken]);
+        return PriceConsumer.oracle_getPricePush(
+            i_pythContract, s_collateralTokenPriceFeed[_collateralToken], i_pythMaxAge
+        );
     }
 }

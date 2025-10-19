@@ -24,6 +24,7 @@ contract Config is Constants, Script {
         address pythContract;
         address[] collateralTokens;
         bytes32[] priceFeeds;
+        uint256 pythMaxAge;
         bool exist;
     }
 
@@ -72,6 +73,7 @@ contract Config is Constants, Script {
             pythContract: 0xA2aa501b19aff244D90cc15a4Cf739D2725B5729,
             collateralTokens: collateralTokens,
             priceFeeds: priceFeeds,
+            pythMaxAge: 60 * 60 * 24 * 7,
             exist: true
         });
     }
@@ -93,6 +95,7 @@ contract Config is Constants, Script {
             pythContract: 0xDd24F84d36BF92C65F92307595335bdFab5Bbd21,
             collateralTokens: collateralTokens,
             priceFeeds: priceFeeds,
+            pythMaxAge: 60 * 60 * 24 * 7,
             exist: true
         });
     }
@@ -121,6 +124,7 @@ contract Config is Constants, Script {
             pythContract: address(pyth),
             collateralTokens: collateralTokens,
             priceFeeds: priceFeeds,
+            pythMaxAge: 60,
             exist: true
         });
 

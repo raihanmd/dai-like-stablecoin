@@ -17,6 +17,8 @@ import {PythInteractions} from "../script/pyth/PythInteractions.s.sol";
 import {DecentralizedStableCoinDeploy} from "../script/DecentralizedStableCoinDeploy.s.sol";
 
 contract BaseTest is Test, Constants {
+    uint256 constant PRICE_PRECISSION = 1e18;
+
     Config.NetworkConfig internal networkConfig;
     mapping(uint256 => address) users;
     uint256 internal totalUsers;

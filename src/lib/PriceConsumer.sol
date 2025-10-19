@@ -10,39 +10,31 @@ import {console2} from "forge-std/console2.sol";
 library PriceConsumer {
     uint256 constant PRICE_PRECISION = 1e18;
 
-    function oracle_getPricePull(IPyth _pythContract, bytes32 _priceFeedId, bytes[] calldata priceUpdate)
-        internal
-        returns (uint256)
-    {
+    function oracle_getPricePull(
+        IPyth _pythContract,
+        bytes32 _priceFeedId,
+        bytes[] calldata priceUpdate,
+        uint256 _maxAge
+    ) internal returns (uint256) {
         uint256 fee = _pythContract.getUpdateFee(priceUpdate);
         _pythContract.updatePriceFeeds{value: fee}(priceUpdate);
 
-        PythStructs.Price memory price = _pythContract.getPriceNoOlderThan(_priceFeedId, 60);
+        PythStructs.Price memory price = _pythContract.getPriceNoOlderThan(_priceFeedId, _maxAge);
 
         uint256 convertedPrice = PythUtils.convertToUint(price.price, price.expo, 18);
 
         return convertedPrice;
     }
 
-    function oracle_getPricePush(IPyth _pythContract, bytes32 _priceFeedId) internal view returns (uint256) {
-        PythStructs.Price memory price = _pythContract.getPriceNoOlderThan(_priceFeedId, 60);
+    function oracle_getPricePush(IPyth _pythContract, bytes32 _priceFeedId, uint256 _maxAge)
+        internal
+        view
+        returns (uint256)
+    {
+        PythStructs.Price memory price = _pythContract.getPriceNoOlderThan(_priceFeedId, _maxAge);
 
         uint256 convertedPrice = PythUtils.convertToUint(price.price, price.expo, 18);
 
         return convertedPrice;
     }
-
-    // function getPriceUnsafe(IPyth _pythContract, bytes32 _priceFeedId) internal view returns (uint256) {
-    //     PythStructs.Price memory price = _pythContract.getPriceUnsafe(_priceFeedId);
-    //     uint256 convertedPrice = PythUtils.convertToUint(price.price, price.expo, 18);
-    //     return convertedPrice;
-    // }
-
-    // function getConversionRate(
-    //     uint256 _ethAmount,
-    //     IPyth _priceFeed
-    // ) internal view returns (uint256) {
-    //     uint256 ethPrice = getPrice(_priceFeed);
-    //     return (_ethAmount * ethPrice) / 1e18;
-    // }
 }
