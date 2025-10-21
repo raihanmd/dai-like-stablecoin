@@ -172,19 +172,19 @@ contract DSCEngineTest is BaseTest {
     /////////////////////////////////////////
     //          GET HEALTH FACTOR          //
     /////////////////////////////////////////
-    // function test__success_shouldCorrectCalculatingHealthFactor() public {
-    //     address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
-    //     uint256 dscToBeMinted = AMOUNT_TO_DEPOSIT / 2;
+    function test__success_shouldCorrectCalculatingHealthFactor() public {
+        address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
+        uint256 dscToBeMinted = AMOUNT_TO_DEPOSIT / 2;
 
-    //     helper_collateralApprove(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
-    //     helper_deposit(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
+        helper_collateralApprove(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
+        helper_deposit(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
 
-    //     vm.prank(users[0]);
-    //     dscEngineContract.mintDsc(dscToBeMinted);
+        vm.prank(users[0]);
+        dscEngineContract.mintDsc(dscToBeMinted);
 
-    //     uint256 healthFactor = dscEngineContract.getHealthFactor(users[0]);
-    //     vm.assertEq(
-    //         healthFactor, (AMOUNT_TO_DEPOSIT * dscEngineContract.getPrice(collateralTokens[0])) / PRICE_PRECISSION
-    //     );
-    // }
+        uint256 healthFactor = dscEngineContract.getHealthFactor(users[0]);
+        vm.assertEq(
+            healthFactor, (AMOUNT_TO_DEPOSIT * dscEngineContract.getPrice(collateralTokens[0])) / PRICE_PRECISSION
+        );
+    }
 }
