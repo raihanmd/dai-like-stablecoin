@@ -21,6 +21,7 @@ contract Config is Constants, Script {
     ERC20Deploy erc20Deployer;
 
     struct NetworkConfig {
+        address dscContract;
         address pythContract;
         address[] collateralTokens;
         bytes32[] priceFeeds;
@@ -70,6 +71,7 @@ contract Config is Constants, Script {
         priceFeeds[1] = 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43;
 
         return NetworkConfig({
+            dscContract: 0x0000000000000000000000000000000000000000,
             pythContract: 0xA2aa501b19aff244D90cc15a4Cf739D2725B5729,
             collateralTokens: collateralTokens,
             priceFeeds: priceFeeds,
@@ -92,6 +94,7 @@ contract Config is Constants, Script {
         priceFeeds[1] = 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43;
 
         return NetworkConfig({
+            dscContract: 0x0000000000000000000000000000000000000000,
             pythContract: 0xDd24F84d36BF92C65F92307595335bdFab5Bbd21,
             collateralTokens: collateralTokens,
             priceFeeds: priceFeeds,
@@ -121,6 +124,7 @@ contract Config is Constants, Script {
         priceFeeds[1] = BTC_USD_PRICE_FEED;
 
         activeNetworkConfig = NetworkConfig({
+            dscContract: 0x0000000000000000000000000000000000000000,
             pythContract: address(pyth),
             collateralTokens: collateralTokens,
             priceFeeds: priceFeeds,

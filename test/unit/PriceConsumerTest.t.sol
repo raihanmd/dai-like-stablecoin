@@ -14,7 +14,7 @@ contract PriceConsumerTest is BaseTest {
     function setUp() public {
         BaseTest.setUpBaseTest();
 
-        dscEngineContract = new DSCEngineDeploy().deploy(msg.sender, BaseTest.networkConfig);
+        (dscEngineContract, networkConfig) = new DSCEngineDeploy().deploy(msg.sender, BaseTest.networkConfig);
     }
 
     /////////////////////////

@@ -20,7 +20,7 @@ contract DSCEngineDeploy is Script, Constants {
 
     function deploy(address _deployer, Config.NetworkConfig memory networkConfig)
         public
-        returns (DSCEngine dscEngine)
+        returns (DSCEngine dscEngine, Config.NetworkConfig memory)
     {
         localNetworkSetup(networkConfig);
 
@@ -42,7 +42,9 @@ contract DSCEngineDeploy is Script, Constants {
 
         vm.stopBroadcast();
 
-        return dscEngine;
+        networkConfig.dscContract = address(dsc);
+
+        return (dscEngine, networkConfig);
     }
 
     function localNetworkSetup(Config.NetworkConfig memory networkConfig) public {

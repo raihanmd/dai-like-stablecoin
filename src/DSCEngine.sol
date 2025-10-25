@@ -37,12 +37,13 @@ contract DSCEngine is ReentrancyGuard {
     uint256 constant PRECISSION = 1e18;
 
     event CollateralDeposited(address indexed user, address indexed token, uint256 amount);
+    event CollateralWithdrawn(address indexed user, address indexed token, uint256 amount);
 
     /**
      * @dev Mapping of collateral token to USD
      */
     mapping(address token => bytes32 priceFeed) private s_collateralTokenPriceFeed;
-    mapping(address user => mapping(address token => uint256 amount)) private s_collateranDeposited;
+    mapping(address user => mapping(address token => uint256 amount)) private s_collateralDeposited;
     mapping(address user => uint256 dscMinted) private s_dscMinted;
 
     address[] private s_collateralTokens;
@@ -73,14 +74,6 @@ contract DSCEngine is ReentrancyGuard {
     modifier moreThanZero(uint256 _amount) {
         if (_amount == 0) revert DSCEngine__AmountShouldBeMoreThanZero();
 
-        _;
-    }
-
-    modifier healthFactorCheck() {
-        uint256 healthFactor = _healthFactor(msg.sender);
-        if (healthFactor < MIN_HEALTH_FACTOR) {
-            revert DSCEngine__HealthFactorIsTooLow();
-        }
         _;
     }
 
@@ -131,7 +124,7 @@ contract DSCEngine is ReentrancyGuard {
             revert DSCEngine__AllowanceExceedsBalance();
         }
 
-        s_collateranDeposited[msg.sender][_collateralTokenAddress] += _amount;
+        s_collateralDeposited[msg.sender][_collateralTokenAddress] += _amount;
 
         emit CollateralDeposited(msg.sender, _collateralTokenAddress, _amount);
 
@@ -140,17 +133,50 @@ contract DSCEngine is ReentrancyGuard {
         if (!success) revert DSCEngine__TransferFailed();
     }
 
-    function redeemDscAndWithdrawCollateral() external {}
+    /**
+     * @param _collateralTokenAddress The address of collateral token
+     * @param _amountCollateral The amount of collateral token to withdraw
+     * @param _amountDsc The amount of DSC to burn
+     *
+     * This function will withdraw collateral token with specified amount
+     */
+    function burnDscAndWithdrawCollateral(
+        address _collateralTokenAddress,
+        uint256 _amountCollateral,
+        uint256 _amountDsc
+    ) external {
+        burnDsc(_amountDsc);
+        withdrawCollateral(_collateralTokenAddress, _amountCollateral);
+    }
 
-    function redeemDsc() external {}
+    /**
+     * @param _collateralTokenAddress The address of collateral token
+     * @param _amount The amount of collateral token to withdraw
+     *
+     * This function will withdraw collateral token with specified amount
+     * also check health factor
+     */
+    function withdrawCollateral(address _collateralTokenAddress, uint256 _amount)
+        public
+        collateralTokenAddressShouldBeSupported(_collateralTokenAddress)
+        moreThanZero(_amount)
+        nonReentrant
+    {
+        s_collateralDeposited[msg.sender][_collateralTokenAddress] -= _amount;
+        emit CollateralWithdrawn(msg.sender, _collateralTokenAddress, _amount);
 
-    function withdrawCollateral() external {}
+        helper_healthFactorCheck();
+
+        bool success = IERC20(_collateralTokenAddress).transfer(msg.sender, _amount);
+        if (!success) revert DSCEngine__TransferFailed();
+    }
 
     /**
      * @param _amount Amount of DSC to mint
      * @notice should overcollateralized and above minimum of threshold
      */
-    function mintDsc(uint256 _amount) public moreThanZero(_amount) healthFactorCheck {
+    function mintDsc(uint256 _amount) public moreThanZero(_amount) {
+        helper_healthFactorCheck();
         s_dscMinted[msg.sender] += _amount;
 
         bool minted = i_dscContract.mint(msg.sender, _amount);
@@ -159,7 +185,19 @@ contract DSCEngine is ReentrancyGuard {
         }
     }
 
-    function burnDsc() external {}
+    /**
+     * @param _amount The amount to be burn
+     *
+     * This founction will burn dsc amount with specified amount
+     */
+    function burnDsc(uint256 _amount) public moreThanZero(_amount) {
+        s_dscMinted[msg.sender] -= _amount;
+        bool success = i_dscContract.transferFrom(msg.sender, address(this), _amount);
+
+        if (!success) revert DSCEngine__TransferFailed();
+
+        i_dscContract.burn(_amount);
+    }
 
     function liquidate() external {}
 
@@ -206,7 +244,7 @@ contract DSCEngine is ReentrancyGuard {
 
         for (uint256 i = 0; i < collateralTokens.length; i++) {
             address token = collateralTokens[i];
-            uint256 amount = s_collateranDeposited[_user][token];
+            uint256 amount = s_collateralDeposited[_user][token];
 
             if (amount > 0) {
                 uint256 price =
@@ -224,5 +262,15 @@ contract DSCEngine is ReentrancyGuard {
         return PriceConsumer.oracle_getPricePush(
             i_pythContract, s_collateralTokenPriceFeed[_collateralToken], i_pythMaxAge
         );
+    }
+
+    //////////////////////////////////
+    //       HELPER FUNCTIONS       //
+    //////////////////////////////////
+    function helper_healthFactorCheck() private view {
+        uint256 healthFactor = _healthFactor(msg.sender);
+        if (healthFactor < MIN_HEALTH_FACTOR) {
+            revert DSCEngine__HealthFactorIsTooLow();
+        }
     }
 }

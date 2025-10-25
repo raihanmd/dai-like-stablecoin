@@ -36,7 +36,7 @@ contract DSCEngineTest is BaseTest {
         BaseTest.initiateBalanceUser(INITIAL_BALANCE);
         BaseTest.initiateCollateralBalance(INITIAL_BALANCE);
 
-        dscEngineContract = new DSCEngineDeploy().deploy(msg.sender, BaseTest.networkConfig);
+        (dscEngineContract, networkConfig) = new DSCEngineDeploy().deploy(msg.sender, BaseTest.networkConfig);
     }
 
     /////////////////////////////////////////
@@ -45,6 +45,11 @@ contract DSCEngineTest is BaseTest {
     function helper_collateralApprove(address user, address collateralToken, uint256 amount) public {
         vm.prank(user);
         MockERC20(collateralToken).approve(address(dscEngineContract), amount);
+    }
+
+    function helper_dscApprove(address user, uint256 amount) public {
+        vm.prank(user);
+        MockERC20(networkConfig.dscContract).approve(address(dscEngineContract), amount);
     }
 
     function helper_deposit(address user, address collateralToken, uint256 amount) public {
@@ -111,6 +116,37 @@ contract DSCEngineTest is BaseTest {
     }
 
     /////////////////////////////////////////
+    //         WITHDRAW COLLATERAL         //
+    /////////////////////////////////////////
+    function test__success_withdrawCollateral() public {
+        address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
+        uint256 collateralToBeWithdraw = AMOUNT_TO_DEPOSIT / 2;
+
+        helper_collateralApprove(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
+        helper_deposit(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
+
+        vm.prank(users[0]);
+        dscEngineContract.withdrawCollateral(collateralTokens[0], collateralToBeWithdraw);
+    }
+
+    function test_error_userCantWithdrawNotSupportedCollateral() public {
+        /**
+         * @notice Contract checking address contract, thus wichis address same as any address (e.g user)
+         */
+        address fakeCollateral = makeAddr("fakeCollateral");
+
+        vm.prank(users[0]);
+        vm.expectRevert(DSCEngine__CollateralTokenNotSupported.selector);
+        dscEngineContract.withdrawCollateral(fakeCollateral, AMOUNT_TO_DEPOSIT);
+    }
+
+    function test_error_userCantWithdrawWithZeroAmount() public {
+        vm.prank(users[0]);
+        vm.expectRevert(DSCEngine__AmountShouldBeMoreThanZero.selector);
+        dscEngineContract.withdrawCollateral(networkConfig.collateralTokens[0], 0);
+    }
+
+    /////////////////////////////////////////
     //              MINT DSC               //
     /////////////////////////////////////////
     function test__success_mintDSCAfterDepositCollateral() public {
@@ -137,6 +173,48 @@ contract DSCEngineTest is BaseTest {
         vm.prank(users[0]);
         vm.expectRevert(DSCEngine__AmountShouldBeMoreThanZero.selector);
         dscEngineContract.mintDsc(0);
+    }
+
+    /////////////////////////////////////////
+    //              BURN DSC               //
+    /////////////////////////////////////////
+    function test__success_burnDSCAfterDepositCollateralAndMintDSC() public {
+        address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
+        uint256 dscToBeMinted = AMOUNT_TO_DEPOSIT / 2;
+        uint256 dscToBeBurned = dscToBeMinted / 2;
+
+        helper_collateralApprove(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
+        helper_deposit(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
+
+        vm.prank(users[0]);
+        dscEngineContract.mintDsc(dscToBeMinted);
+
+        (uint256 dscMintedFirstTime,) = dscEngineContract.getAccountInformation(users[0]);
+
+        helper_dscApprove(users[0], dscToBeBurned);
+
+        vm.prank(users[0]);
+        dscEngineContract.burnDsc(dscToBeBurned);
+
+        (uint256 dscAmountAfterBurn,) = dscEngineContract.getAccountInformation(users[0]);
+
+        vm.assertEq(dscAmountAfterBurn, dscMintedFirstTime - dscToBeBurned);
+    }
+
+    function test__failed_burnDSCFailedIfNotEnoughAllowance() public {
+        address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
+        uint256 dscToBeMinted = AMOUNT_TO_DEPOSIT / 2;
+        uint256 dscToBeBurned = dscToBeMinted / 2;
+
+        helper_collateralApprove(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
+        helper_deposit(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
+
+        vm.prank(users[0]);
+        dscEngineContract.mintDsc(dscToBeMinted);
+
+        vm.expectRevert();
+        vm.prank(users[0]);
+        dscEngineContract.burnDsc(dscToBeBurned);
     }
 
     /////////////////////////////////////////
@@ -176,15 +254,19 @@ contract DSCEngineTest is BaseTest {
         address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
         uint256 dscToBeMinted = AMOUNT_TO_DEPOSIT / 2;
 
+        // deposit: 0.5 ETH, $2_000 e18
         helper_collateralApprove(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
         helper_deposit(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
 
         vm.prank(users[0]);
         dscEngineContract.mintDsc(dscToBeMinted);
 
+        uint256 collateralValue = dscEngineContract.getCollateralValue(users[0]);
+
         uint256 healthFactor = dscEngineContract.getHealthFactor(users[0]);
         vm.assertEq(
-            healthFactor, (AMOUNT_TO_DEPOSIT * dscEngineContract.getPrice(collateralTokens[0])) / PRICE_PRECISSION
+            healthFactor,
+            collateralValue * LIQUIDATION_THRESHOLD / LIQUIDATION_PRECISSION * PRICE_PRECISSION / dscToBeMinted
         );
     }
 }

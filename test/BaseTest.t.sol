@@ -18,6 +18,8 @@ import {DecentralizedStableCoinDeploy} from "../script/DecentralizedStableCoinDe
 
 contract BaseTest is Test, Constants {
     uint256 constant PRICE_PRECISSION = 1e18;
+    uint256 constant LIQUIDATION_THRESHOLD = 50;
+    uint256 constant LIQUIDATION_PRECISSION = 100;
 
     Config.NetworkConfig internal networkConfig;
     mapping(uint256 => address) users;
