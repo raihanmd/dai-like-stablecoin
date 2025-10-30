@@ -29,11 +29,13 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__TransferFailed();
     error DSCEngine__MintFailed();
     error DSCEngine__HealthFactorIsTooLow();
+    error DSCEngine__HealthFactorIsFine();
 
     uint256 immutable i_pythMaxAge;
     uint8 constant LIQUIDATION_THRESHOLD = 50; // 200% overcollateralized
     uint8 constant LIQUIDATION_PRECISSION = 100;
-    uint8 constant MIN_HEALTH_FACTOR = 1;
+    uint8 constant LIQUIDATION_BONUS = 10;
+    uint256 constant MIN_HEALTH_FACTOR = 1e18;
     uint256 constant PRECISSION = 1e18;
 
     event CollateralDeposited(address indexed user, address indexed token, uint256 amount);
@@ -103,6 +105,16 @@ contract DSCEngine is ReentrancyGuard {
     //////////////////////////////////
     //      EXTERNAL FUNCTIONS      //
     //////////////////////////////////
+
+    /**
+     * @param _collateralTokenAddress Supported ERC20 token address (WETH and WBTC)
+     * @param _amount Amount of collateral token
+     *
+     * This function combine depositCollateral and mintDsc function
+     *
+     * depositCollateral: deposit collateral token to the contract
+     * mintDsc: will mint DSC with specified amount
+     */
     function depositCollateralAndMintDsc(address _collateralTokenAddress, uint256 _amount) external {
         depositCollateral(_collateralTokenAddress, _amount);
         mintDsc(_amount);
@@ -199,7 +211,41 @@ contract DSCEngine is ReentrancyGuard {
         i_dscContract.burn(_amount);
     }
 
-    function liquidate() external {}
+    /**
+     * @param _collateralTokenAddress The ERC20 collateral to liquidate
+     * @param _user The user who has broken their health factor. Their health factor below MIN_HEALTH_FACTOR
+     * @param _debtToCover The amount of DSC you want to burn to improve the users health factor
+     * @notice You can partially liquidate liquidate a user
+     * @notice You will get a liquidation bonus for taking the users funds
+     * @notice This function working assumes the protocol will be roughly 200% overcollateralized in order for this to work.
+     *
+     * e.g if the user in the first place deposit $100 worth of ETH, and mint 50 DSC
+     * and if the collateral value drop to $75, this user health factor is bad, so liquidator can liquidate this user by paying 50 DSC and get their colalteral value which is $75
+     *
+     * if someway the collateral value drop lets say to $20, you still need to pay 50 DSC and get collateral value worth of $20
+     *
+     * @notice A known bug would be if the protocol were 100% or less collateralized, then we wouldn;t be able to incentive the liquidator
+     */
+    function liquidate(address _collateralTokenAddress, address _user, uint256 _debtToCover)
+        external
+        moreThanZero(_debtToCover)
+        nonReentrant
+    {
+        if (_healthFactor(_user) >= MIN_HEALTH_FACTOR) {
+            revert DSCEngine__HealthFactorIsFine();
+        }
+
+        // Lets assume ETH price $4_000
+        // Bad user $75 ETH -> 50 DSC
+        // 50 DSC = 50 / 4000 = 0.0125 ETH
+        uint256 tokenAmountFromDebtCovered = getTokenAmountFromUsd(_collateralTokenAddress, _debtToCover);
+
+        // Bonus = 0.0125 ETH * 10% = 0.00125 ETH
+        uint256 bonusCollateral = (tokenAmountFromDebtCovered * LIQUIDATION_BONUS / LIQUIDATION_PRECISSION);
+
+        // Total = 0.01375 ETH
+        uint256 totalCollateralToWithdraw = tokenAmountFromDebtCovered + bonusCollateral;
+    }
 
     //////////////////////////////////
     // PRIVATE & INTERNAL FUNCTIONS //
@@ -235,10 +281,23 @@ contract DSCEngine is ReentrancyGuard {
     //////////////////////////////////
     //       PUBLIC FUNCTIONS       //
     //////////////////////////////////
+
+    /**
+     * @param _user User address
+     *
+     * This function return user's health factor
+     * The minimun threshold health factor is 1
+     * by that mean, if health factor lower than 1, user is legitimate to liquidated
+     */
     function getHealthFactor(address _user) public view returns (uint256) {
         return _healthFactor(_user);
     }
 
+    /**
+     * @param _user User address used extract their account information
+     *
+     * This function will return the value of collateral deposited in USD (no precission conversion needed)
+     */
     function getCollateralValue(address _user) public view returns (uint256 totalCollateralValue) {
         address[] memory collateralTokens = s_collateralTokens;
 
@@ -254,14 +313,31 @@ contract DSCEngine is ReentrancyGuard {
         }
     }
 
+    /**
+     * @param _user User address used extract their account information
+     *
+     * This function will return the DSC balance and collateral value
+     */
     function getAccountInformation(address _user) public view returns (uint256 dscBalance, uint256 collateralValue) {
         return _getAccountInformation(_user);
     }
 
+    /**
+     * @param _collateralToken Address of the collateral token
+     *
+     * This function will return the price of the collateral token
+     */
     function getPrice(address _collateralToken) public view returns (uint256) {
         return PriceConsumer.oracle_getPricePush(
             i_pythContract, s_collateralTokenPriceFeed[_collateralToken], i_pythMaxAge
         );
+    }
+
+    function getTokenAmountFromUsd(address _collateralToken, uint256 _usdAmountInWei) public view returns (uint256) {
+        uint256 price = getPrice(_collateralToken);
+
+        // $1000e18 * 1e18 / $4000e18 = 0.25e18
+        return (_usdAmountInWei * PRECISSION) / price;
     }
 
     //////////////////////////////////

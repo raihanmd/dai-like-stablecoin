@@ -26,6 +26,12 @@ library PriceConsumer {
     //     return convertedPrice;
     // }
 
+    /**
+     * @param _pythContract The pyth oracle contract
+     * @param _priceFeedId Price feed id that stores price data
+     * @param _maxAge Maximum age
+     * @notice return in 18 decimals
+     */
     function oracle_getPricePush(IPyth _pythContract, bytes32 _priceFeedId, uint256 _maxAge)
         internal
         view

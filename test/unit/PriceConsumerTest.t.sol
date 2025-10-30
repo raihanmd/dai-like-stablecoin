@@ -17,9 +17,9 @@ contract PriceConsumerTest is BaseTest {
         (dscEngineContract, networkConfig) = new DSCEngineDeploy().deploy(msg.sender, BaseTest.networkConfig);
     }
 
-    /////////////////////////
-    //       DEPOSIT       //
-    /////////////////////////
+    ////////////////////////////
+    //        GET PRICE       //
+    ////////////////////////////
     function test__shouldSuccessGetPriceOfEachCollateralToken() public view {
         address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
 
