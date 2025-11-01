@@ -30,6 +30,7 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__MintFailed();
     error DSCEngine__HealthFactorIsTooLow();
     error DSCEngine__HealthFactorIsFine();
+    error DSCEngine__HealthNotImproved();
 
     uint256 immutable i_pythMaxAge;
     uint8 constant LIQUIDATION_THRESHOLD = 50; // 200% overcollateralized
@@ -39,7 +40,9 @@ contract DSCEngine is ReentrancyGuard {
     uint256 constant PRECISSION = 1e18;
 
     event CollateralDeposited(address indexed user, address indexed token, uint256 amount);
-    event CollateralWithdrawn(address indexed user, address indexed token, uint256 amount);
+    event CollateralWithdrawn(
+        address indexed redeemedFrom, address indexed redeemedTo, address indexed token, uint256 amount
+    );
 
     /**
      * @dev Mapping of collateral token to USD
@@ -174,13 +177,8 @@ contract DSCEngine is ReentrancyGuard {
         moreThanZero(_amount)
         nonReentrant
     {
-        s_collateralDeposited[msg.sender][_collateralTokenAddress] -= _amount;
-        emit CollateralWithdrawn(msg.sender, _collateralTokenAddress, _amount);
-
-        helper_healthFactorCheck();
-
-        bool success = IERC20(_collateralTokenAddress).transfer(msg.sender, _amount);
-        if (!success) revert DSCEngine__TransferFailed();
+        _withdrawCollateral(msg.sender, msg.sender, _collateralTokenAddress, _amount);
+        helper_healthFactorCheck(msg.sender);
     }
 
     /**
@@ -188,13 +186,11 @@ contract DSCEngine is ReentrancyGuard {
      * @notice should overcollateralized and above minimum of threshold
      */
     function mintDsc(uint256 _amount) public moreThanZero(_amount) {
-        helper_healthFactorCheck();
+        uint256 hfAfter = _healthFactorWithExtraDebt(msg.sender, _amount);
+        if (hfAfter < MIN_HEALTH_FACTOR) revert DSCEngine__HealthFactorIsTooLow();
         s_dscMinted[msg.sender] += _amount;
-
         bool minted = i_dscContract.mint(msg.sender, _amount);
-        if (!minted) {
-            revert DSCEngine__MintFailed();
-        }
+        if (!minted) revert DSCEngine__MintFailed();
     }
 
     /**
@@ -203,12 +199,8 @@ contract DSCEngine is ReentrancyGuard {
      * This founction will burn dsc amount with specified amount
      */
     function burnDsc(uint256 _amount) public moreThanZero(_amount) {
-        s_dscMinted[msg.sender] -= _amount;
-        bool success = i_dscContract.transferFrom(msg.sender, address(this), _amount);
-
-        if (!success) revert DSCEngine__TransferFailed();
-
-        i_dscContract.burn(_amount);
+        _burnDsc(msg.sender, msg.sender, _amount);
+        helper_healthFactorCheck(msg.sender);
     }
 
     /**
@@ -231,7 +223,8 @@ contract DSCEngine is ReentrancyGuard {
         moreThanZero(_debtToCover)
         nonReentrant
     {
-        if (_healthFactor(_user) >= MIN_HEALTH_FACTOR) {
+        uint256 startingHealthFactor = _healthFactor(_user);
+        if (startingHealthFactor >= MIN_HEALTH_FACTOR) {
             revert DSCEngine__HealthFactorIsFine();
         }
 
@@ -245,6 +238,15 @@ contract DSCEngine is ReentrancyGuard {
 
         // Total = 0.01375 ETH
         uint256 totalCollateralToWithdraw = tokenAmountFromDebtCovered + bonusCollateral;
+
+        _withdrawCollateral(_user, msg.sender, _collateralTokenAddress, totalCollateralToWithdraw);
+
+        _burnDsc(_user, msg.sender, _debtToCover);
+
+        uint256 endingHealthFactor = _healthFactor(_user);
+        if (endingHealthFactor <= startingHealthFactor) revert DSCEngine__HealthNotImproved();
+
+        helper_healthFactorCheck(msg.sender);
     }
 
     //////////////////////////////////
@@ -276,6 +278,48 @@ contract DSCEngine is ReentrancyGuard {
         dscBalance = s_dscMinted[_user];
         collateralValue = getCollateralValue(_user);
         return (dscBalance, collateralValue);
+    }
+
+    /**
+     * @dev Low level internal function, dont call this function unless, the function calling it is checking for health factor
+     * @param _from User that will decreace the collateral
+     * @param _to User receiver collateral token
+     * @param _collateralTokenAddress Address of collateral token
+     * @param _amount Amount of collateral
+     */
+    function _withdrawCollateral(address _from, address _to, address _collateralTokenAddress, uint256 _amount)
+        private
+        moreThanZero(_amount)
+        nonReentrant
+    {
+        s_collateralDeposited[_from][_collateralTokenAddress] -= _amount;
+        emit CollateralWithdrawn(_from, _to, _collateralTokenAddress, _amount);
+
+        bool success = IERC20(_collateralTokenAddress).transfer(_to, _amount);
+        if (!success) revert DSCEngine__TransferFailed();
+    }
+
+    /**
+     * @dev Low level internal function, dont call this function unless, the function calling it is checking for health factor
+     * @param _onBehalfOf User that will decreace the DSC minted mapping
+     * @param _dscFrom User that transfer their DSC to this contract
+     * @param _amount Amount of DSC
+     */
+    function _burnDsc(address _onBehalfOf, address _dscFrom, uint256 _amount) private moreThanZero(_amount) {
+        s_dscMinted[_onBehalfOf] -= _amount;
+        bool success = i_dscContract.transferFrom(_dscFrom, address(this), _amount);
+
+        if (!success) revert DSCEngine__TransferFailed();
+
+        i_dscContract.burn(_amount);
+    }
+
+    function _healthFactorWithExtraDebt(address _user, uint256 _extraDsc) private view returns (uint256) {
+        (uint256 dscBalance, uint256 collateralValue) = _getAccountInformation(_user);
+        uint256 newDscBalance = dscBalance + _extraDsc;
+        if (newDscBalance == 0) return type(uint256).max;
+        uint256 collateralAdjusted = (collateralValue * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISSION;
+        return (collateralAdjusted * PRECISSION) / newDscBalance;
     }
 
     //////////////////////////////////
@@ -343,8 +387,8 @@ contract DSCEngine is ReentrancyGuard {
     //////////////////////////////////
     //       HELPER FUNCTIONS       //
     //////////////////////////////////
-    function helper_healthFactorCheck() private view {
-        uint256 healthFactor = _healthFactor(msg.sender);
+    function helper_healthFactorCheck(address _user) private view {
+        uint256 healthFactor = _healthFactor(_user);
         if (healthFactor < MIN_HEALTH_FACTOR) {
             revert DSCEngine__HealthFactorIsTooLow();
         }
