@@ -52,7 +52,7 @@ contract DSCEngineDeploy is Script, Constants {
 
         PythInteractions pythInteractions = new PythInteractions();
 
-        pythInteractions.createPriceFeed(address(networkConfig.pythContract), ETH_USD_PRICE_FEED, ETH_PRICE, "ETH/USD");
-        pythInteractions.createPriceFeed(address(networkConfig.pythContract), BTC_USD_PRICE_FEED, BTC_PRICE, "BTC/USD");
+        pythInteractions.updatePriceFeed(address(networkConfig.pythContract), ETH_USD_PRICE_FEED, ETH_PRICE, "ETH/USD");
+        pythInteractions.updatePriceFeed(address(networkConfig.pythContract), BTC_USD_PRICE_FEED, BTC_PRICE, "BTC/USD");
     }
 }

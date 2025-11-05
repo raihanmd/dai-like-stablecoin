@@ -174,7 +174,6 @@ contract DSCEngine is ReentrancyGuard {
     function withdrawCollateral(address _collateralTokenAddress, uint256 _amount)
         public
         collateralTokenAddressShouldBeSupported(_collateralTokenAddress)
-        moreThanZero(_amount)
         nonReentrant
     {
         _withdrawCollateral(msg.sender, msg.sender, _collateralTokenAddress, _amount);
@@ -198,7 +197,7 @@ contract DSCEngine is ReentrancyGuard {
      *
      * This founction will burn dsc amount with specified amount
      */
-    function burnDsc(uint256 _amount) public moreThanZero(_amount) {
+    function burnDsc(uint256 _amount) public nonReentrant {
         _burnDsc(msg.sender, msg.sender, _amount);
         helper_healthFactorCheck(msg.sender);
     }
@@ -241,6 +240,7 @@ contract DSCEngine is ReentrancyGuard {
 
         _withdrawCollateral(_user, msg.sender, _collateralTokenAddress, totalCollateralToWithdraw);
 
+        s_dscMinted[msg.sender] -= _debtToCover;
         _burnDsc(_user, msg.sender, _debtToCover);
 
         uint256 endingHealthFactor = _healthFactor(_user);
@@ -256,7 +256,7 @@ contract DSCEngine is ReentrancyGuard {
     /**
      * @notice Return how close is user to a liquidation
      *
-     * If user goes below 1, it can be liquidated
+     * If user goes below 1e18, it can be liquidated
      * The liquidation threshold is 50%, by that means as an example if the collateral value is 100, the user can mint up to 50 DSC
      * and if below that the user can be liquidated
      */
@@ -282,6 +282,7 @@ contract DSCEngine is ReentrancyGuard {
 
     /**
      * @dev Low level internal function, dont call this function unless, the function calling it is checking for health factor
+     * @dev And also make sure the function calling it is checking for reentrancy
      * @param _from User that will decreace the collateral
      * @param _to User receiver collateral token
      * @param _collateralTokenAddress Address of collateral token
@@ -290,7 +291,6 @@ contract DSCEngine is ReentrancyGuard {
     function _withdrawCollateral(address _from, address _to, address _collateralTokenAddress, uint256 _amount)
         private
         moreThanZero(_amount)
-        nonReentrant
     {
         s_collateralDeposited[_from][_collateralTokenAddress] -= _amount;
         emit CollateralWithdrawn(_from, _to, _collateralTokenAddress, _amount);
@@ -301,6 +301,7 @@ contract DSCEngine is ReentrancyGuard {
 
     /**
      * @dev Low level internal function, dont call this function unless, the function calling it is checking for health factor
+     * @dev And also make sure the function calling it is checking for reentrancy
      * @param _onBehalfOf User that will decreace the DSC minted mapping
      * @param _dscFrom User that transfer their DSC to this contract
      * @param _amount Amount of DSC
@@ -382,6 +383,15 @@ contract DSCEngine is ReentrancyGuard {
 
         // $1000e18 * 1e18 / $4000e18 = 0.25e18
         return (_usdAmountInWei * PRECISSION) / price;
+    }
+
+    function getUsdValue(address _collateralToken, uint256 _amount) public view returns (uint256) {
+        uint256 price = getPrice(_collateralToken);
+        return (_amount * price) / PRECISSION;
+    }
+
+    function getPythAddress() public view returns (address) {
+        return address(i_pythContract);
     }
 
     //////////////////////////////////

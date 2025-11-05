@@ -7,14 +7,7 @@ import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
 
 contract PythInteractions is Script {
-    // function run() external {
-    //     address mostRecentlyDeployed = DevOpsTools.get_most_recent_deployment("MockPyth", block.chainid);
-
-    //     createPriceFeed(mostRecentlyDeployed, "ETH/USD", 4000);
-    //     createPriceFeed(mostRecentlyDeployed, "BTC/USD", 100_000);
-    // }
-
-    function createPriceFeed(address _pythAddress, bytes32 _priceFeedId, int64 _price, string memory _pair) public {
+    function updatePriceFeed(address _pythAddress, bytes32 _priceFeedId, int64 _price, string memory _pair) public {
         bytes[] memory updateData = new bytes[](1);
 
         MockPyth pyth = MockPyth(_pythAddress);

@@ -21,11 +21,14 @@ contract BaseTest is Test, Constants {
     uint256 constant LIQUIDATION_THRESHOLD = 50;
     uint256 constant LIQUIDATION_PRECISSION = 100;
 
+    PythInteractions pythInteractions;
+
     Config.NetworkConfig internal networkConfig;
     mapping(uint256 => address) users;
     uint256 internal totalUsers;
 
     function setUpBaseTest() internal {
+        pythInteractions = new PythInteractions();
         networkConfig = new Config().getConfig();
     }
 

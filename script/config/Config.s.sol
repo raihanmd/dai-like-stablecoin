@@ -4,7 +4,6 @@ pragma solidity 0.8.30;
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
 import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
-import {MockPyth} from "@pythnetwork/pyth-sdk-solidity/MockPyth.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {Constants} from "./Constants.s.sol";
