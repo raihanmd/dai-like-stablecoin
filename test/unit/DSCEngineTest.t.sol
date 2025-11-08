@@ -270,6 +270,29 @@ contract DSCEngineTest is BaseTest {
     }
 
     /////////////////////////////////////////
+    //          DEPOSIT AND MINT           //
+    /////////////////////////////////////////
+    function test__success_userShouldCanDepositAndMintAndTriggerEvent() public {
+        address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
+        address collateralToken = collateralTokens[0];
+        uint256 dscToMint = helper_getUsdValue(collateralToken, AMOUNT_TO_DEPOSIT / 3);
+
+        helper_collateralApprove(users[0], collateralToken, AMOUNT_TO_DEPOSIT);
+
+        vm.expectEmit(true, true, false, true, address(dscEngineContract));
+        emit DSCEngine.CollateralDeposited(users[0], collateralToken, AMOUNT_TO_DEPOSIT);
+
+        vm.prank(users[0]);
+        dscEngineContract.depositCollateralAndMintDsc(collateralToken, AMOUNT_TO_DEPOSIT, dscToMint);
+
+        (uint256 userDscMinted, uint256 userCollateralValue) = dscEngineContract.getAccountInformation(users[0]);
+        uint256 expectedCollateralValue = helper_getUsdValue(collateralToken, AMOUNT_TO_DEPOSIT);
+
+        vm.assertEq(userDscMinted, dscToMint, "DSC minted amount should match");
+        vm.assertEq(userCollateralValue, expectedCollateralValue, "Collateral value should match");
+    }
+
+    /////////////////////////////////////////
     //           LIQUIDATE USER            //
     /////////////////////////////////////////
     function test__success_liquidateUser() public {

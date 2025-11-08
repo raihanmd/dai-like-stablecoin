@@ -111,16 +111,19 @@ contract DSCEngine is ReentrancyGuard {
 
     /**
      * @param _collateralTokenAddress Supported ERC20 token address (WETH and WBTC)
-     * @param _amount Amount of collateral token
+     * @param _collateralTokenAddress Amount of collateral token
+     * @param _dscAmount Amount of DSC
      *
      * This function combine depositCollateral and mintDsc function
      *
      * depositCollateral: deposit collateral token to the contract
      * mintDsc: will mint DSC with specified amount
      */
-    function depositCollateralAndMintDsc(address _collateralTokenAddress, uint256 _amount) external {
-        depositCollateral(_collateralTokenAddress, _amount);
-        mintDsc(_amount);
+    function depositCollateralAndMintDsc(address _collateralTokenAddress, uint256 _collateralAmount, uint256 _dscAmount)
+        external
+    {
+        depositCollateral(_collateralTokenAddress, _collateralAmount);
+        mintDsc(_dscAmount);
     }
 
     /**
