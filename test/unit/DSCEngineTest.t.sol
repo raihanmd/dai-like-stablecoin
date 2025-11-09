@@ -293,6 +293,43 @@ contract DSCEngineTest is BaseTest {
     }
 
     /////////////////////////////////////////
+    //  BURN DSC AND WITHDRAW COLLATERAN   //
+    /////////////////////////////////////////
+    function test__success_userShouldCanBurnDSCAndWithdrawCollateral() public {
+        address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
+        address collateralToken = collateralTokens[0];
+        uint256 dscToMint = helper_getUsdValue(collateralToken, AMOUNT_TO_DEPOSIT / 3);
+
+        helper_collateralApprove(users[0], collateralToken, AMOUNT_TO_DEPOSIT);
+
+        vm.expectEmit(true, true, false, true, address(dscEngineContract));
+        emit DSCEngine.CollateralDeposited(users[0], collateralToken, AMOUNT_TO_DEPOSIT);
+
+        vm.prank(users[0]);
+        dscEngineContract.depositCollateralAndMintDsc(collateralToken, AMOUNT_TO_DEPOSIT, dscToMint);
+
+        (uint256 userDscMinted, uint256 userCollateralValue) = dscEngineContract.getAccountInformation(users[0]);
+        uint256 expectedCollateralValue = helper_getUsdValue(collateralToken, AMOUNT_TO_DEPOSIT);
+
+        vm.assertEq(userDscMinted, dscToMint, "DSC minted amount should match");
+        vm.assertEq(userCollateralValue, expectedCollateralValue, "Collateral value should match");
+
+        helper_dscApprove(users[0], dscToMint);
+
+        vm.expectEmit(true, true, false, true, address(dscEngineContract));
+        emit DSCEngine.CollateralWithdrawn(users[0], users[0], collateralToken, AMOUNT_TO_DEPOSIT);
+
+        vm.prank(users[0]);
+        dscEngineContract.burnDscAndWithdrawCollateral(collateralToken, AMOUNT_TO_DEPOSIT, dscToMint);
+
+        (uint256 userDscMintedAfterBurn, uint256 userCollateralValueAfterBurn) =
+            dscEngineContract.getAccountInformation(users[0]);
+
+        vm.assertEq(userDscMintedAfterBurn, 0, "DSC minted amount should match");
+        vm.assertEq(userCollateralValueAfterBurn, 0, "Collateral value should match");
+    }
+
+    /////////////////////////////////////////
     //           LIQUIDATE USER            //
     /////////////////////////////////////////
     function test__success_liquidateUser() public {
