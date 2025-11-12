@@ -216,6 +216,19 @@ contract DSCEngineTest is BaseTest {
         dscEngineContract.mintDsc(0);
     }
 
+    function test__error_userCantMintDSCIfBreaksHealthFactor() public {
+        address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
+
+        helper_collateralApprove(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
+        helper_deposit(users[0], collateralTokens[0], AMOUNT_TO_DEPOSIT);
+
+        uint256 usdValue = helper_getUsdValue(collateralTokens[0], AMOUNT_TO_DEPOSIT);
+
+        vm.prank(users[0]);
+        vm.expectRevert(DSCEngine.DSCEngine__HealthFactorIsTooLow.selector);
+        dscEngineContract.mintDsc(usdValue);
+    }
+
     /////////////////////////////////////////
     //              BURN DSC               //
     /////////////////////////////////////////

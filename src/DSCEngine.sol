@@ -225,7 +225,8 @@ contract DSCEngine is ReentrancyGuard {
         moreThanZero(_debtToCover)
         nonReentrant
     {
-        uint256 startingHealthFactor = _healthFactor(_user);
+        (uint256 startingDscBalance, uint256 startingCollateralValue) = _getAccountInformation(_user);
+        uint256 startingHealthFactor = _calculateHealthFactor(startingDscBalance, startingCollateralValue);
         if (startingHealthFactor >= MIN_HEALTH_FACTOR) {
             revert DSCEngine__HealthFactorIsFine();
         }
@@ -246,10 +247,9 @@ contract DSCEngine is ReentrancyGuard {
         s_dscMinted[msg.sender] -= _debtToCover;
         _burnDsc(_user, msg.sender, _debtToCover);
 
-        uint256 endingHealthFactor = _healthFactor(_user);
+        (uint256 endingDscBalance, uint256 endingCollateralValue) = _getAccountInformation(_user);
+        uint256 endingHealthFactor = _calculateHealthFactor(endingDscBalance, endingCollateralValue);
         if (endingHealthFactor <= startingHealthFactor) revert DSCEngine__HealthNotImproved();
-
-        helper_healthFactorCheck(msg.sender);
     }
 
     //////////////////////////////////
@@ -257,21 +257,16 @@ contract DSCEngine is ReentrancyGuard {
     /////////////////////////////////
 
     /**
-     * @notice Return how close is user to a liquidation
-     *
-     * If user goes below 1e18, it can be liquidated
-     * The liquidation threshold is 50%, by that means as an example if the collateral value is 100, the user can mint up to 50 DSC
-     * and if below that the user can be liquidated
+     * @notice Return how close is some calculation to a liquidation
      */
-    function _healthFactor(address _user) private view returns (uint256) {
-        (uint256 dscBalance, uint256 collateralValue) = _getAccountInformation(_user);
-        if (dscBalance == 0) return type(uint256).max;
-        uint256 collateralAdjustedForThreshold = (collateralValue * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISSION; // e.g $150 * 50 / 100 = 75
+    function _calculateHealthFactor(uint256 _dscBalance, uint256 _collateralValue) private pure returns (uint256) {
+        if (_dscBalance == 0) return type(uint256).max;
+        uint256 collateralAdjustedForThreshold = (_collateralValue * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISSION; // e.g $150 * 50 / 100 = 75
 
         // Good e.g 75 * 1e18 / 50 = 1.5e18
         // Bad e.g 75 * 1e18 / 100 = 0.75e18
 
-        return (collateralAdjustedForThreshold * PRECISSION) / dscBalance;
+        return (collateralAdjustedForThreshold * PRECISSION) / _dscBalance;
     }
 
     /**
@@ -338,7 +333,17 @@ contract DSCEngine is ReentrancyGuard {
      * by that mean, if health factor lower than 1, user is legitimate to liquidated
      */
     function getHealthFactor(address _user) public view returns (uint256) {
-        return _healthFactor(_user);
+        return helper_healthFactorCheck(_user);
+    }
+
+    /**
+     * @param _dscBalance User's DSC balance
+     * @param _collateralValue User's collateral value
+     *
+     * This function will calculate the health factor with specified parameters
+     */
+    function calculateHealthFactor(uint256 _dscBalance, uint256 _collateralValue) public pure returns (uint256) {
+        return _calculateHealthFactor(_dscBalance, _collateralValue);
     }
 
     /**
@@ -397,13 +402,19 @@ contract DSCEngine is ReentrancyGuard {
         return address(i_pythContract);
     }
 
+    function getTotalSupply() public view returns (uint256) {
+        return i_dscContract.totalSupply();
+    }
+
     //////////////////////////////////
     //       HELPER FUNCTIONS       //
     //////////////////////////////////
-    function helper_healthFactorCheck(address _user) private view {
-        uint256 healthFactor = _healthFactor(_user);
+    function helper_healthFactorCheck(address _user) private view returns (uint256) {
+        (uint256 dscBalance, uint256 collateralValue) = _getAccountInformation(_user);
+        uint256 healthFactor = _calculateHealthFactor(dscBalance, collateralValue);
         if (healthFactor < MIN_HEALTH_FACTOR) {
             revert DSCEngine__HealthFactorIsTooLow();
         }
+        return healthFactor;
     }
 }
