@@ -1,22 +1,21 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity 0.8.30;
 
-import {Test} from "forge-std/Test.sol";
-import {StdInvariant} from "forge-std/Stdinvariant.sol";
 import {console2} from "forge-std/console2.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {DSCEngine} from "../../src/DSCEngine.sol";
-import {MockERC20} from "../../src/mock/MockERC20.sol";
-import {BaseTest} from "../BaseTest.t.sol";
+import {DSCEngine} from "../../../src/DSCEngine.sol";
+import {BaseTest} from "../../BaseTest.t.sol";
+import {Handler} from "./Handler.t.sol";
 
-import {DSCEngineDeploy} from "../../script/DSCEngineDeploy.s.sol";
+import {DSCEngineDeploy} from "../../../script/DSCEngineDeploy.s.sol";
 
 //* 1. The total supply of DSC should always less than the total value of the collateral
 //* 2. Getter function should always not revert
 
-contract OpenInvariantTest is BaseTest {
+contract InvariantTest is BaseTest {
     DSCEngine dscEngineContract;
+    Handler handler;
 
     uint256 constant INITIAL_BALANCE = 1e18;
     uint256 constant AMOUNT_TO_DEPOSIT = 0.5e18;
@@ -29,7 +28,9 @@ contract OpenInvariantTest is BaseTest {
 
         (dscEngineContract, networkConfig) = new DSCEngineDeploy().deploy(msg.sender, BaseTest.networkConfig);
 
-        targetContract(address(dscEngineContract));
+        handler = new Handler(address(dscEngineContract), networkConfig);
+
+        targetContract(address(handler));
     }
 
     function invariant_protocolMustHaveMoreValueThanTotalSupply() external view {
@@ -44,6 +45,18 @@ contract OpenInvariantTest is BaseTest {
         uint256 totalWbtcValue =
             dscEngineContract.getUsdValue(BaseTest.networkConfig.collateralTokens[1], totalWbtcDeposited);
 
+        console2.log("totalWethValue", totalWethValue);
+        console2.log("totalWbtcValue", totalWbtcValue);
+        console2.log("totalSupply", totalSupply);
+
         vm.assertGe(totalWethValue + totalWbtcValue, totalSupply);
+    }
+
+    function invariant_getterWithNoArgsShouldNotRevert() external view {
+        dscEngineContract.getPythAddress();
+
+        dscEngineContract.getTotalSupply();
+
+        dscEngineContract.getCollateralTokens();
     }
 }
