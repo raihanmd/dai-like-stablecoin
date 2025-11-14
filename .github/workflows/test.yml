@@ -23,8 +23,7 @@ jobs:
       - name: Install Bun
         uses: oven-sh/setup-bun@v1
 
-      - name: Bun install (optional)
-        if: exists('package.json')
+      - name: Bun install
         run: bun install
 
       - name: Show Forge version
