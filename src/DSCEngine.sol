@@ -380,9 +380,10 @@ contract DSCEngine is ReentrancyGuard {
      * This function will return the price of the collateral token
      */
     function getPrice(address _collateralToken) public view returns (uint256) {
-        return PriceConsumer.oracle_getPricePush(
-            i_pythContract, s_collateralTokenPriceFeed[_collateralToken], i_pythMaxAge
-        );
+        return
+            PriceConsumer.oracle_getPricePush(
+                i_pythContract, s_collateralTokenPriceFeed[_collateralToken], i_pythMaxAge
+            );
     }
 
     function getTokenAmountFromUsd(address _collateralToken, uint256 _usdAmountInWei) public view returns (uint256) {

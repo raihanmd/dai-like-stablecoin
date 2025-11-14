@@ -92,7 +92,7 @@ contract DSCEngineTest is BaseTest {
     /////////////////////////////////////////
     //            CONFIG RELATED           //
     /////////////////////////////////////////
-    function test__success_balanceInCollateralShouldSameAsInitialize() public view BaseTest.localNetworkOnly() {
+    function test__success_balanceInCollateralShouldSameAsInitialize() public view BaseTest.localNetworkOnly {
         address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
 
         for (uint256 i = 0; i < totalUsers; i++) {
@@ -104,7 +104,7 @@ contract DSCEngineTest is BaseTest {
         }
     }
 
-    function test__success_priceFeedIdShouldBeCorrect() public view BaseTest.localNetworkOnly() {
+    function test__success_priceFeedIdShouldBeCorrect() public view BaseTest.localNetworkOnly {
         bytes32[] memory priceFeeds = BaseTest.networkConfig.priceFeeds;
         address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
 
