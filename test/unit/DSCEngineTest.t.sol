@@ -104,6 +104,20 @@ contract DSCEngineTest is BaseTest {
         }
     }
 
+    function test__success_priceFeedIdShouldBeCorrect() public view BaseTest.localNetworkOnly() {
+        bytes32[] memory priceFeeds = BaseTest.networkConfig.priceFeeds;
+        address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
+
+        for (uint256 i = 0; i < collateralTokens.length; i++) {
+            bytes32 priceFeedId = dscEngineContract.getCollateralTokenPriceFeed(collateralTokens[i]);
+
+            console2.log("Collateral Token: %s", collateralTokens[i]);
+            console2.logBytes32(priceFeedId);
+
+            vm.assertEq(priceFeedId, priceFeeds[i]);
+        }
+    }
+
     function test__error_constructorMissmatchArrayLength() public {
         address[] memory collateralTokens = new address[](2);
         bytes32[] memory priceFeeds = new bytes32[](1);
@@ -306,7 +320,7 @@ contract DSCEngineTest is BaseTest {
     }
 
     /////////////////////////////////////////
-    //  BURN DSC AND WITHDRAW COLLATERAN   //
+    //  BURN DSC AND WITHDRAW COLLATERAL   //
     /////////////////////////////////////////
     function test__success_userShouldCanBurnDSCAndWithdrawCollateral() public {
         address[] memory collateralTokens = BaseTest.networkConfig.collateralTokens;
@@ -374,7 +388,7 @@ contract DSCEngineTest is BaseTest {
         );
 
         helper_updatePriceFeed(
-            address(networkConfig.pythContract), networkConfig.priceFeeds[0], ETH_PRICE_UPDATED, "ETH/USD"
+            address(networkConfig.pythContract), networkConfig.priceFeeds[0], ETH_PRICE_UPDATED, "Crypto.WETH/BTC"
         );
 
         helper_dscApprove(liquidator, dscToBeMinted);
@@ -417,7 +431,7 @@ contract DSCEngineTest is BaseTest {
         );
 
         helper_updatePriceFeed(
-            address(networkConfig.pythContract), networkConfig.priceFeeds[0], ETH_PRICE_UPDATED, "ETH/USD"
+            address(networkConfig.pythContract), networkConfig.priceFeeds[0], ETH_PRICE_UPDATED, "Crypto.WETH/BTC"
         );
 
         helper_dscApprove(liquidator, dscToBeMinted);

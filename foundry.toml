@@ -6,6 +6,7 @@ libs = ["lib", "node_modules", "script/config"]
 fs_permissions = [
     { access = "read", path = "./broadcast" },
     { access = "read", path = "./reports" },
+    { access = "read", path = "./test/fixtures" },
 ]
 
 [invariant]

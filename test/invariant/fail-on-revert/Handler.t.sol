@@ -9,6 +9,7 @@ import {DecentralizedStableCoin} from "../../../src/DecentralizedStableCoin.sol"
 import {Config} from "../../../script/config/Config.s.sol";
 
 import {DSCEngineDeploy} from "../../../script/DSCEngineDeploy.s.sol";
+import {PythInteractions} from "../../../script/pyth/PythInteractions.s.sol";
 
 contract Handler is Test {
     DSCEngine dscEngineContract;
@@ -18,12 +19,15 @@ contract Handler is Test {
     MockERC20 wbtc;
 
     Config.NetworkConfig networkConfig;
+    PythInteractions pythInteractions;
 
     uint256 constant MAX_DEPOSIT_FIRST_TURN = type(uint96).max;
 
     address[] public s_usersWithCollateralDeposited;
 
     constructor(address _dsce, Config.NetworkConfig memory _networkConfig) {
+        pythInteractions = new PythInteractions();
+
         networkConfig = _networkConfig;
 
         weth = MockERC20(networkConfig.collateralTokens[0]);
@@ -93,6 +97,19 @@ contract Handler is Test {
         dscEngineContract.mintDsc(_amount);
     }
 
+    // * @notice This break our invariant test suite
+    // function updateCollateralPrice(uint256 _collateralSeed, int64 _price) public {
+    //     (bytes32 priceFeedId, string memory pair) = helper_getCollateralPriceFeedAndPair(_collateralSeed);
+    //     MockERC20 collateral = helper_getCollateralFromSeed(_collateralSeed);
+
+    //     int64 price = int64(bound(_price, 0, type(int64).max));
+
+    //     vm.warp(block.timestamp + 10);
+    //     vm.roll(block.number + 1);
+    //     vm.prank(address(networkConfig.pythContract));
+    //     pythInteractions.updatePriceFeed(address(collateral), priceFeedId, price, pair);
+    // }
+
     ///////////////////////
     //       HELPER      //
     ///////////////////////
@@ -102,5 +119,17 @@ contract Handler is Test {
         }
 
         return MockERC20(wbtc);
+    }
+
+    function helper_getCollateralPriceFeedAndPair(uint256 _collateralSeed)
+        private
+        view
+        returns (bytes32, string memory)
+    {
+        if (_collateralSeed % 2 == 0) {
+            return (networkConfig.priceFeeds[0], "Crypto.WETH/BTC");
+        }
+
+        return (networkConfig.priceFeeds[1], "Crypto.BTC/USD");
     }
 }

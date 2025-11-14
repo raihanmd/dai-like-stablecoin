@@ -9,8 +9,8 @@ abstract contract Constants {
     uint256 public constant ETH_SEPOLIA_CHAIN_ID = 11155111;
     uint256 public constant LOCAL_CHAIN_ID = 31337;
 
-    bytes32 public constant ETH_USD_PRICE_FEED = keccak256(abi.encodePacked("ETH/USD"));
-    bytes32 public constant BTC_USD_PRICE_FEED = keccak256(abi.encodePacked("BTC/USD"));
+    bytes32 public constant ETH_USD_PRICE_FEED = keccak256(abi.encodePacked("Crypto.WETH/BTC"));
+    bytes32 public constant BTC_USD_PRICE_FEED = keccak256(abi.encodePacked("Crypto.BTC/USD"));
 
     int64 public constant ETH_PRICE = 4_000;
     int64 public constant ETH_PRICE_UPDATED = 3_000;

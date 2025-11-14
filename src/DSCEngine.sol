@@ -359,8 +359,7 @@ contract DSCEngine is ReentrancyGuard {
             uint256 amount = s_collateralDeposited[_user][token];
 
             if (amount > 0) {
-                uint256 price =
-                    PriceConsumer.oracle_getPricePush(i_pythContract, s_collateralTokenPriceFeed[token], i_pythMaxAge);
+                uint256 price = getPrice(token);
                 totalCollateralValue += (amount * price) / PriceConsumer.PRICE_PRECISION;
             }
         }

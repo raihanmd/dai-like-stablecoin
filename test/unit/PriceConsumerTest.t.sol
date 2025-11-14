@@ -79,7 +79,7 @@ contract PriceConsumerTest is BaseTest {
         uint256 price = dscEngineContract.getPrice(collateralToken);
 
         helper_updatePriceFeed(
-            address(networkConfig.pythContract), networkConfig.priceFeeds[0], ETH_PRICE_UPDATED, "ETH/USD"
+            address(networkConfig.pythContract), networkConfig.priceFeeds[0], ETH_PRICE_UPDATED, "Crypto.WETH/BTC"
         );
 
         uint256 priceAfterPriceChange = dscEngineContract.getPrice(collateralToken);
@@ -100,7 +100,7 @@ contract PriceConsumerTest is BaseTest {
         vm.assertEq(actualUsdValue, expectedUsdValue);
 
         helper_updatePriceFeed(
-            address(networkConfig.pythContract), networkConfig.priceFeeds[0], ETH_PRICE_UPDATED, "ETH/USD"
+            address(networkConfig.pythContract), networkConfig.priceFeeds[0], ETH_PRICE_UPDATED, "Crypto.WETH/BTC"
         );
 
         uint256 priceAfterChange = dscEngineContract.getPrice(collateralToken);
@@ -121,7 +121,7 @@ contract PriceConsumerTest is BaseTest {
         uint256 price = dscEngineContract.getPrice(collateralToken);
 
         helper_updatePriceFeed(
-            address(networkConfig.pythContract), networkConfig.priceFeeds[0], ETH_PRICE_UPDATED, "ETH/USD"
+            address(networkConfig.pythContract), networkConfig.priceFeeds[0], ETH_PRICE_UPDATED, "Crypto.WETH/BTC"
         );
 
         uint256 priceAfterChange = dscEngineContract.getPrice(collateralToken);
