@@ -20,6 +20,13 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+
+      - name: Bun install (optional)
+        if: exists('package.json')
+        run: bun install
+
       - name: Show Forge version
         run: |
           forge --version
