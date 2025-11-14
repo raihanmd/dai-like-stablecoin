@@ -435,7 +435,7 @@ npm start
 - ✅ **Internal Review**: Completed
 - ✅ **Test Coverage**: 88.05%
 
-### Known Issues
+### Known Issues ⚠️
 
 1. **Oracle Dependency**: Protocol relies on Pyth keeper for price updates
 2. **Liquidation Risk**: If protocol becomes <100% collateralized, liquidation incentives break
@@ -451,12 +451,7 @@ npm start
 
 ### Bug Bounty
 
-We take security seriously. If you discover a vulnerability:
-
-1. **Do NOT** open a public issue
-2. Email: security@example.com
-3. Include detailed description and PoC
-4. Bounty range: $500 - $50,000 depending on severity
+This is just a side project, so there is no bug bounty program. If you find a vulnerability, please report it to the maintainers.
 
 ---
 
@@ -478,12 +473,8 @@ We take security seriously. If you discover a vulnerability:
 │       └── PythInteractions.s.sol
 ├── test/
 │   ├── unit/
-│   ├── integration/
 │   ├── invariant/
 │   └── BaseTest.t.sol
-├── keeper-bot/
-│   ├── keeper.js                     # Price update bot
-│   └── monitoring.js
 └── foundry.toml
 ```
 
@@ -495,9 +486,6 @@ forge fmt
 
 # Lint
 forge fmt --check
-
-# Static analysis
-slither .
 
 # Gas optimization report
 forge test --gas-report
@@ -572,12 +560,6 @@ We welcome contributions! Please follow these guidelines:
 - [MakerDAO DAI](https://makerdao.com/)
 - [Liquity LUSD](https://www.liquity.org/)
 - [Synthetix](https://synthetix.io/)
-
-### Community
-
-- [Discord](https://discord.gg/your-discord)
-- [Twitter](https://twitter.com/your-twitter)
-- [Telegram](https://t.me/your-telegram)
 
 ---
 
