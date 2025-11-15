@@ -368,8 +368,7 @@ test/
 ✅ Health factor calculations  
 ✅ Liquidation mechanism  
 ✅ Price oracle integration  
-✅ Reentrancy protection  
-✅ Edge cases and reverts
+✅ Reentrancy protection
 
 ---
 
