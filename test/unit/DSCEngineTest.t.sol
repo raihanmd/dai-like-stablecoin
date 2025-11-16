@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity 0.8.30;
 
-import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 
 import {DSCEngine} from "../../src/DSCEngine.sol";

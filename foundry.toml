@@ -9,6 +9,9 @@ fs_permissions = [
     { access = "read", path = "./test/fixtures" },
 ]
 
+[lint]
+paths = ["src"]
+
 [invariant]
 runs = 256
 depth = 10

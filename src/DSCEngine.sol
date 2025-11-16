@@ -4,7 +4,6 @@ pragma solidity 0.8.30;
 import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
-import {PythStructs} from "@pythnetwork/pyth-sdk-solidity/PythStructs.sol";
 
 import {DecentralizedStableCoin} from "../src/DecentralizedStableCoin.sol";
 import {PriceConsumer} from "./lib/PriceConsumer.sol";
@@ -65,11 +64,14 @@ contract DSCEngine is ReentrancyGuard {
      * @param _collateralTokenAddress Address of the collateral token
      */
     modifier collateralTokenAddressShouldBeSupported(address _collateralTokenAddress) {
+        _collateralTokenAddressShouldBeSupported(_collateralTokenAddress);
+        _;
+    }
+
+    function _collateralTokenAddressShouldBeSupported(address _collateralTokenAddress) internal view {
         if (s_collateralTokenPriceFeed[_collateralTokenAddress] == bytes32(0)) {
             revert DSCEngine__CollateralTokenNotSupported();
         }
-
-        _;
     }
 
     /**
@@ -77,9 +79,12 @@ contract DSCEngine is ReentrancyGuard {
      * @param _amount Amount of collateral token
      */
     modifier moreThanZero(uint256 _amount) {
-        if (_amount == 0) revert DSCEngine__AmountShouldBeMoreThanZero();
-
+        _moreThanZero(_amount);
         _;
+    }
+
+    function _moreThanZero(uint256 _amount) internal pure {
+        if (_amount == 0) revert DSCEngine__AmountShouldBeMoreThanZero();
     }
 
     constructor(
