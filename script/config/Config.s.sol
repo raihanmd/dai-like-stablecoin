@@ -34,14 +34,14 @@ contract Config is Constants, Script {
 
     constructor() {
         erc20Deployer = new ERC20Deploy();
-
-        networkConfigs[BASE_SEPOLIA_CHAIN_ID] = getBaseSepoliaConfig();
-        networkConfigs[ETH_SEPOLIA_CHAIN_ID] = getEthSepoliaConfig();
-        networkConfigs[LOCAL_CHAIN_ID] = getOrCreateAnvilEthConfig();
     }
 
     function getConfig() public returns (NetworkConfig memory) {
-        return getConfigByChainId(block.chainid);
+        return getConfig(msg.sender);
+    }
+
+    function getConfig(address _deployer) public returns (NetworkConfig memory) {
+        return getConfigByChainId(block.chainid, _deployer);
     }
 
     function setConfig(uint256 chainId, NetworkConfig memory networkConfig) public {
@@ -49,7 +49,13 @@ contract Config is Constants, Script {
     }
 
     function getConfigByChainId(uint256 chainId) public returns (NetworkConfig memory) {
-        if (block.chainid == LOCAL_CHAIN_ID) return getOrCreateAnvilEthConfig();
+        return getConfigByChainId(chainId, msg.sender);
+    }
+
+    function getConfigByChainId(uint256 chainId, address _deployer) public returns (NetworkConfig memory) {
+        if (block.chainid == LOCAL_CHAIN_ID) return getOrCreateAnvilEthConfig(_deployer);
+        if (block.chainid == BASE_SEPOLIA_CHAIN_ID) return getBaseSepoliaConfig();
+        if (block.chainid == ETH_SEPOLIA_CHAIN_ID) return getEthSepoliaConfig();
 
         NetworkConfig memory config = networkConfigs[chainId];
         if (!config.exist) revert Config__InvalidChainId();
@@ -102,18 +108,18 @@ contract Config is Constants, Script {
         });
     }
 
-    function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory) {
+    function getOrCreateAnvilEthConfig(address _deployer) public returns (NetworkConfig memory) {
         /**
          * @dev We do the setup for local anvil network here in the base test so that
          * all the unit tests that inherit from this base test can use the deployed contracts
          * and the network config.
          */
-        IPyth pyth = new PythDeploy().deploy(msg.sender);
+        IPyth pyth = new PythDeploy().deploy(_deployer);
 
         address[] memory collateralTokens = new address[](2);
 
-        ERC20 wethFake = erc20Deployer.deploy(msg.sender, "Wrapped Ethereum", "WETH");
-        ERC20 wbtcFake = erc20Deployer.deploy(msg.sender, "Wrapped Bitcoin", "WBTC");
+        ERC20 wethFake = erc20Deployer.deploy(_deployer, "Wrapped Ethereum", "WETH");
+        ERC20 wbtcFake = erc20Deployer.deploy(_deployer, "Wrapped Bitcoin", "WBTC");
 
         collateralTokens[0] = address(wethFake);
         collateralTokens[1] = address(wbtcFake);

@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import {Script} from "forge-std/Script.sol";
+import {console2} from "forge-std/console2.sol";
 
 import {Constants} from "./config/Constants.s.sol";
 import {DSCEngine} from "../src/DSCEngine.sol";
@@ -14,7 +15,7 @@ import {DecentralizedStableCoinDeploy} from "./DecentralizedStableCoinDeploy.s.s
 
 contract DSCEngineDeploy is Script, Constants {
     function run() public {
-        deploy(msg.sender, new Config().getConfig());
+        deploy(msg.sender, new Config().getConfig(msg.sender));
     }
 
     function deploy(address _deployer, Config.NetworkConfig memory networkConfig)

@@ -31,10 +31,9 @@ anvil-sepolia :; anvil --fork-url $(ETH_SEPOLIA_RPC_URL)
 deploy:
 	@forge script ./script/DSCEngineDeploy.s.sol:DSCEngineDeploy \
 	--rpc-url http://localhost:8545 \
-	--account anvil-local \
-	--sender 0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266 \
+	--account anvil \
+	--sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 \
 	--broadcast \
-	--skip-simulation \
 	-vvvv
 
 deploy-sepolia:
