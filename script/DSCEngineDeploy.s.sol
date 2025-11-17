@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 import {Script} from "forge-std/Script.sol";
-import {IPyth} from "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
 
 import {Constants} from "./config/Constants.s.sol";
 import {DSCEngine} from "../src/DSCEngine.sol";

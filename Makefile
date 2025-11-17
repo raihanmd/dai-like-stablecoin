@@ -10,15 +10,10 @@
 
 all: clean remove install update build
 
-# Clean the repo
 clean  :; forge clean
-
-# Remove modules
-remove :; rm -rf .gitmodules && rm -rf .git/modules/* && rm -rf lib && touch .gitmodules && git add . && git commit -m "modules"
 
 install :; forge install && bun install
 
-# Update Dependencies
 update:; forge update
 
 build:; forge build
@@ -29,15 +24,21 @@ snapshot :; forge snapshot
 
 format :; forge fmt
 
-anvil :; anvil -m 'test test test test test test test test test test test junk' --steps-tracing --block-time 1
+anvil :; anvil --chain-id 31337 -m 'test test test test test test test test test test test junk' --steps-tracing --block-time 1
 
 anvil-sepolia :; anvil --fork-url $(ETH_SEPOLIA_RPC_URL)
 
 deploy:
-	@forge script script/DSCEngineDeploy.s.sol:DSCEngineDeploy --broadcast -vvvv --account sepolia --sender 0x87406E426cfEFd1700997D8e0194e8FCe079125e --rpc-url http://localhost:8545
+	@forge script ./script/DSCEngineDeploy.s.sol:DSCEngineDeploy \
+	--rpc-url http://localhost:8545 \
+	--account anvil-local \
+	--sender 0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266 \
+	--broadcast \
+	--skip-simulation \
+	-vvvv
 
 deploy-sepolia:
-	@forge script script/DSCEngineDeploy.s.sol:DSCEngineDeploy --rpc-url $(ETH_SEPOLIA_RPC_URL) --account sepolia --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
+	@forge script script/DSCEngineDeploy.s.sol:DSCEngineDeploy --rpc-url $(ETH_SEPOLIA_RPC_URL) --account sepolia --sender 0x87406e426cfefd1700997d8e0194e8fce079125e --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
 
 # createSubscription:
 # 	@forge script script/Interactions.s.sol:CreateSubscription $(NETWORK_ARGS)

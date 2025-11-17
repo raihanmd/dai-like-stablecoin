@@ -9,6 +9,13 @@ fs_permissions = [
     { access = "read", path = "./test/fixtures" },
 ]
 
+remappings = [
+    "forge-std/=lib/forge-std/src/",
+    "foundry-devops/=lib/foundry-devops/",
+    "@openzeppelin/=node_modules/@openzeppelin/",
+    "@pythnetwork/=node_modules/@pythnetwork/",
+]
+
 [lint]
 paths = ["src"]
 

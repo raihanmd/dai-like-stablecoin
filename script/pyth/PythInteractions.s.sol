@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 import {MockPyth} from "@pythnetwork/pyth-sdk-solidity/MockPyth.sol";
-import {DevOpsTools} from "foundry-devops/DevOpsTools.sol";
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
 
