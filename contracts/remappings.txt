@@ -1,0 +1,4 @@
+@openzeppelin/=node_modules/@openzeppelin/
+@pythnetwork/=node_modules/@pythnetwork/
+forge-std/=lib/forge-std/src/
+foundry-devops/=lib/foundry-devops/
