@@ -1,8 +1,26 @@
 {
   "name": "stablecoin",
+  "module": "index.ts",
+  "type": "module",
   "private": true,
+  "scripts": {
+    "fe:dev": "bun run --cwd frontend dev",
+    "fe:build": "bun run --cwd frontend build",
+    "fe:check": "bun run --cwd frontend check",
+    "fe:format:check": "bun run --cwd frontend format:check",
+    "fe:format:write": "bun run --cwd frontend format:write",
+    "fe:lint": "bun run --cwd frontend lint",
+    "fe:lint:fix": "bun run --cwd frontend lint:fix",
+    "fe:preview": "bun run --cwd frontend preview",
+    "fe:start": "bun run --cwd frontend start",
+    "fe:typecheck": "bun run --cwd frontend typecheck",
+    "contract:test": "make -C contracts test",
+    "contract:build": "make -C contracts build"
+  },
+  "devDependencies": {
+    "@wagmi/cli": "^2.8.0"
+  },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.4.0",
-    "@pythnetwork/pyth-sdk-solidity": "^4.2.0"
+    "wagmi": "^2.19.4"
   }
 }

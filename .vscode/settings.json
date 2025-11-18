@@ -1,0 +1,13 @@
+{
+  "solidity.packageDefaultDependenciesContractsDirectory": "./contracts/src",
+  "solidity.packageDefaultDependenciesDirectory": [
+    "./contracts/node_modules",
+    "./contracts/lib"
+  ],
+  "solidity.remappings": [
+    "forge-std=./contracts/lib/forge-std/src",
+    "foundry-devops=./contracts/lib/foundry-devops",
+    "@openzeppelin=./contracts/node_modules/@openzeppelin",
+    "@pythnetwork=./contracts/node_modules/@pythnetwork"
+  ]
+}
