@@ -1,6 +1,5 @@
 {
   "name": "stablecoin",
-  "module": "index.ts",
   "type": "module",
   "private": true,
   "scripts": {
@@ -16,11 +15,5 @@
     "fe:typecheck": "bun run --cwd frontend typecheck",
     "contract:test": "make -C contracts test",
     "contract:build": "make -C contracts build"
-  },
-  "devDependencies": {
-    "@wagmi/cli": "^2.8.0"
-  },
-  "dependencies": {
-    "wagmi": "^2.19.4"
   }
 }
