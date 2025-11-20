@@ -4,6 +4,7 @@ import { type Metadata } from "next";
 import { Geist } from "next/font/google";
 import RootProvider from "~/provider/root-provider";
 import Header from "~/_components/header";
+import Footer from "~/_components/footer";
 
 export const metadata: Metadata = {
   title: "Decentralized Stablecoin",
@@ -25,6 +26,7 @@ export default function RootLayout({
         <RootProvider>
           <Header />
           {children}
+          <Footer />
         </RootProvider>
       </body>
     </html>
