@@ -8,7 +8,6 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {DecentralizedStableCoin} from "../src/DecentralizedStableCoin.sol";
 import {PriceConsumer} from "./lib/PriceConsumer.sol";
 
-
 /**
  * @title DSCEngine
  * @author raihanmd
@@ -67,12 +66,6 @@ contract DSCEngine is ReentrancyGuard {
     modifier collateralTokenAddressShouldBeSupported(address _collateralTokenAddress) {
         _collateralTokenAddressShouldBeSupported(_collateralTokenAddress);
         _;
-    }
-
-    function _collateralTokenAddressShouldBeSupported(address _collateralTokenAddress) internal view {
-        if (s_collateralTokenPriceFeed[_collateralTokenAddress] == bytes32(0)) {
-            revert DSCEngine__CollateralTokenNotSupported();
-        }
     }
 
     /**
@@ -273,6 +266,16 @@ contract DSCEngine is ReentrancyGuard {
         // Bad e.g 75 * 1e18 / 100 = 0.75e18
 
         return (collateralAdjustedForThreshold * PRECISSION) / _dscBalance;
+    }
+
+    /**
+     * @notice Revert if the collateral token is not supported
+     * @param _collateralTokenAddress Address of the collateral token
+     */
+    function _collateralTokenAddressShouldBeSupported(address _collateralTokenAddress) internal view {
+        if (s_collateralTokenPriceFeed[_collateralTokenAddress] == bytes32(0)) {
+            revert DSCEngine__CollateralTokenNotSupported();
+        }
     }
 
     /**

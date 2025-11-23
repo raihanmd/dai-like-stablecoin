@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { motion } from "motion/react";
-
 import { cn } from "~/lib/utils";
 
 interface LightRaysProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -61,7 +60,7 @@ const Ray = ({
 }: LightRay) => {
   return (
     <motion.div
-      className="pointer-events-none absolute -top-[12%] left-[--ray-left] h-[--light-rays-length] w-[--ray-width] origin-top -translate-x-1/2 rounded-full bg-linear-to-b from-[color-mix(in_srgb,var(--light-rays-color)_70%,transparent)] to-transparent opacity-0 mix-blend-screen blur-[--light-rays-blur]"
+      className="pointer-events-none absolute -top-[12%] left-[var(--ray-left)] h-[var(--light-rays-length)] w-[var(--ray-width)] origin-top -translate-x-1/2 rounded-full bg-gradient-to-b from-[color-mix(in_srgb,var(--light-rays-color)_70%,transparent)] to-transparent opacity-0 mix-blend-screen blur-[var(--light-rays-blur)]"
       style={
         {
           "--ray-left": `${left}%`,

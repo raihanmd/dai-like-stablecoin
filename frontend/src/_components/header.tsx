@@ -25,8 +25,8 @@ export default function Header() {
         className={cn(
           "mx-auto flex max-w-6xl items-center justify-between rounded-2xl transition-all duration-500 ease-in-out",
           isScrolled
-            ? "bg-background/80 border-border/50 max-w-5xl rounded-3xl border px-4 py-3 shadow-lg backdrop-blur-md"
-            : "bg-background/40 border-border/20 border px-8 py-4 backdrop-blur-sm",
+            ? "bg-background/50 border-border/50 max-w-5xl rounded-3xl border px-4 py-3 shadow-lg backdrop-blur-[3px]"
+            : "border-border/20 px-8 py-4",
         )}
       >
         {/* Logo */}

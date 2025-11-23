@@ -13,7 +13,9 @@
     "fe:preview": "bun run --cwd frontend preview",
     "fe:start": "bun run --cwd frontend start",
     "fe:typecheck": "bun run --cwd frontend typecheck",
+    "contract:deploy": "make -C contracts deploy",
     "contract:test": "make -C contracts test",
+    "contract:anvil": "make -C contracts anvil",
     "contract:build": "make -C contracts build"
   }
 }
