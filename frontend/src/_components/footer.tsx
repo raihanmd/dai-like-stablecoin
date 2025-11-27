@@ -48,7 +48,7 @@ export default function Footer() {
           </div>
 
           {/* Community */}
-          {/* <div className="space-y-3">
+          <div className="space-y-3">
             <p className="text-foreground text-sm font-semibold">Community</p>
             <ul className="space-y-2 text-sm">
               <li>
@@ -76,7 +76,7 @@ export default function Footer() {
                 </a>
               </li>
             </ul>
-          </div> */}
+          </div>
 
           {/* Resources */}
           <div className="space-y-3">
