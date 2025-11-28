@@ -2,6 +2,8 @@
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Menu, X } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { cn } from "~/lib/utils";
@@ -30,12 +32,12 @@ export default function Header() {
         )}
       >
         {/* Logo */}
-        <div className="flex items-center gap-2">
-          <div className="from-primary to-accent h-8 w-8 rounded-lg bg-linear-to-br" />
+        <Link href="/" className="flex cursor-pointer items-center gap-2">
+          <Image src="/favicon.ico" alt="Logo" width={32} height={32} />
           <span className="text-foreground hidden font-semibold sm:block">
             Decentralized Stablecoin
           </span>
-        </div>
+        </Link>
 
         {/* Navigation - Desktop
         <nav className="hidden items-center gap-8 md:flex">
