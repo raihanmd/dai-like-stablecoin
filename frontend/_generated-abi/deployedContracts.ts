@@ -3,6 +3,8 @@
  * You should not edit it manually or your changes might be overwritten.
  */
 
+import type { GenericContractsDeclaration } from "~/lib/scaffold-eth/contract";
+
 const deployedContracts = {
   31337: {
     MockPyth: {
@@ -2401,4 +2403,4 @@ const deployedContracts = {
   },
 } as const;
 
-export default deployedContracts;
+export default deployedContracts satisfies GenericContractsDeclaration;

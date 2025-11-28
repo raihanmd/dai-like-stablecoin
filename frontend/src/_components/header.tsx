@@ -1,5 +1,4 @@
 "use client";
-
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Menu, X } from "lucide-react";
 import Image from "next/image";
@@ -64,6 +63,7 @@ export default function Header() {
         {/* Right Section */}
         <div className="flex items-center gap-3">
           <ConnectButton />
+          {/* <RainbowKitCustomConnectButton /> */}
 
           {/* Mobile Menu Toggle */}
           <button
