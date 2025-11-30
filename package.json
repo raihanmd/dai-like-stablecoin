@@ -3,6 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "install": "(cd frontend && bun i) && (cd contracts && forge install)",
     "fe:dev": "bun run --cwd frontend dev",
     "fe:build": "bun run --cwd frontend build",
     "fe:check": "bun run --cwd frontend check",
